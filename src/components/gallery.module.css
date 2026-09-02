@@ -1,0 +1,422 @@
+/* --- App shell -------------------------------------------------------------- */
+
+.shell {
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+}
+
+.header {
+  position: sticky;
+  top: 0;
+  z-index: var(--z-nav);
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-3) var(--space-6);
+  background: var(--paper);
+  border-bottom: 2px solid var(--ink);
+}
+
+.wordmark {
+  font-size: var(--text-sm);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wider);
+  white-space: nowrap;
+}
+
+.headerSpacer {
+  flex: 1;
+}
+
+.who {
+  font-size: var(--text-xs);
+  color: var(--ink-40);
+  white-space: nowrap;
+}
+
+.body {
+  display: grid;
+  grid-template-columns: 15rem 1fr;
+  flex: 1;
+  min-height: 0;
+}
+
+.sidebar {
+  padding: var(--space-6);
+  border-right: 2px dashed var(--rule-strong);
+  overflow-y: auto;
+}
+
+.content {
+  padding: var(--space-6);
+  min-width: 0;
+}
+
+@media (max-width: 860px) {
+  .body {
+    grid-template-columns: 1fr;
+  }
+  .sidebar {
+    border-right: 0;
+    border-bottom: 2px dashed var(--rule-strong);
+  }
+}
+
+/* --- Filters ---------------------------------------------------------------- */
+
+.facetGroup {
+  margin-bottom: var(--space-6);
+}
+
+.facetTitle {
+  font-size: var(--text-xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wider);
+  color: var(--ink-40);
+  margin-bottom: var(--space-2);
+}
+
+.facetLink {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: var(--space-1) 0;
+  font-size: var(--text-sm);
+  text-decoration: none;
+  color: var(--ink-60);
+}
+
+.facetLink:hover {
+  color: var(--ink);
+}
+
+.facetActive {
+  color: var(--ink);
+  font-weight: 700;
+}
+
+.facetCount {
+  color: var(--ink-30);
+  font-variant-numeric: tabular-nums;
+}
+
+/* --- Timeline --------------------------------------------------------------- */
+
+.dayHeading {
+  position: sticky;
+  top: 3.5rem;
+  z-index: 2;
+  padding: var(--space-2) 0;
+  margin-top: var(--space-6);
+  background: var(--paper);
+  font-size: var(--text-sm);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wide);
+  border-bottom: 1px dashed var(--rule);
+}
+
+.dayHeading:first-child {
+  margin-top: 0;
+}
+
+/*
+ * A uniform square grid, cover-cropped.
+ *
+ * Justified rows (each tile flex-grown by its aspect ratio) were tried first and
+ * look better in principle, but they cannot be done correctly in CSS alone: the
+ * final row of a flex container stretches its last item to the full width, so a
+ * lone portrait photo rendered as a full-bleed band. Doing it properly needs a JS
+ * measurement pass on every resize.
+ *
+ * A fixed grid is exact on first paint, costs nothing to lay out at 100k photos,
+ * and never reflows as images decode. Cropping is only in the grid — the lightbox
+ * shows the whole frame.
+ */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 4px;
+  margin-top: var(--space-3);
+}
+
+.tile {
+  position: relative;
+  aspect-ratio: 1;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: var(--rule-faint);
+  overflow: hidden;
+  cursor: pointer;
+}
+
+/*
+ * Every tile is the same square.
+ *
+ * Letting portrait frames span two rows gave the grid more rhythm but left holes,
+ * because a spanning item cannot be backfilled without `grid-auto-flow: dense` —
+ * and dense reorders tiles away from their DOM order. In a chronological archive
+ * that is the wrong trade: it would break the correspondence between the grid and
+ * the timeline, and make the lightbox's next/previous disagree with what the eye
+ * sees. Uniform cells stay in order and leave no gaps.
+ */
+
+.tile img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  /* A blank tile until the image decodes reads as broken; a soft fade does not. */
+  animation: fadeIn var(--dur-normal) var(--ease-stagger);
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.tile:hover img,
+.tile:focus-visible img {
+  transform: scale(1.03);
+  transition: transform var(--dur-normal) var(--ease-panel);
+}
+
+.tileSelected {
+  outline: 3px solid var(--ink);
+  outline-offset: -3px;
+}
+
+/* Small ink dot marking a photo that is not visible to the whole batch. */
+.privacyDot {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--ink);
+  box-shadow: 0 0 0 2px var(--surface);
+}
+
+.checkbox {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 2px solid var(--surface);
+  background: rgb(0 0 0 / 0.25);
+}
+
+.checkboxOn {
+  background: var(--ink);
+}
+
+.empty {
+  padding: var(--space-12) 0;
+  text-align: center;
+  color: var(--ink-40);
+}
+
+.sentinel {
+  height: 1px;
+}
+
+.loading {
+  padding: var(--space-6);
+  text-align: center;
+  color: var(--ink-40);
+  font-size: var(--text-sm);
+}
+
+/* --- Selection bar ---------------------------------------------------------- */
+
+.selectionBar {
+  position: fixed;
+  bottom: var(--space-6);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: var(--z-toast);
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-3) var(--space-6);
+  background: var(--surface);
+  border: 2px solid var(--ink);
+  border-radius: var(--radius-sketch);
+  box-shadow: var(--shadow-sticker);
+  animation: rise var(--dur-normal) var(--ease-spring);
+}
+
+@keyframes rise {
+  from {
+    transform: translate(-50%, 120%);
+  }
+  to {
+    transform: translate(-50%, 0);
+  }
+}
+
+.smallButton {
+  padding: var(--space-1) var(--space-3);
+  background: transparent;
+  border: 2px solid var(--ink);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wide);
+}
+
+.smallButton:hover {
+  background: var(--ink);
+  color: var(--surface);
+}
+
+/* --- Lightbox --------------------------------------------------------------- */
+
+.lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-overlay);
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  background: var(--paper);
+}
+
+.lightboxTop {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--rule);
+}
+
+.stage {
+  position: relative;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  min-height: 0;
+}
+
+.stage img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  transition: transform var(--dur-normal) var(--ease-panel);
+  /* A deterrent, not a control — see SECURITY.md. */
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+.zoomed {
+  cursor: zoom-out;
+}
+
+.notZoomed {
+  cursor: zoom-in;
+}
+
+.navButton {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  background: var(--surface);
+  border: 2px solid var(--ink);
+  border-radius: 50%;
+  font-size: var(--text-lg);
+  line-height: 1;
+}
+
+.navPrev {
+  left: var(--space-4);
+}
+
+.navNext {
+  right: var(--space-4);
+}
+
+.navButton:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-6);
+  padding: var(--space-3) var(--space-4);
+  border-top: 1px solid var(--rule);
+  font-size: var(--text-sm);
+  color: var(--ink-50);
+}
+
+.metaKey {
+  color: var(--ink-30);
+  text-transform: uppercase;
+  font-size: var(--text-xs);
+  letter-spacing: var(--tracking-wide);
+  margin-right: var(--space-1);
+}
+
+/* --- Uploader --------------------------------------------------------------- */
+
+.dropZone {
+  padding: var(--space-8);
+  border: 2px dashed var(--rule-strong);
+  border-radius: var(--radius-sketch);
+  text-align: center;
+  color: var(--ink-40);
+}
+
+.dropZoneActive {
+  border-color: var(--ink);
+  color: var(--ink);
+  background: var(--surface);
+}
+
+.queue {
+  margin-top: var(--space-4);
+  max-height: 16rem;
+  overflow-y: auto;
+  font-size: var(--text-sm);
+}
+
+.queueRow {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-1) 0;
+  border-bottom: 1px dashed var(--rule-faint);
+}
+
+.queueName {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.statusOk {
+  color: var(--success);
+}
+
+.statusFail {
+  color: var(--danger);
+}
+
+.statusPending {
+  color: var(--ink-30);
+}

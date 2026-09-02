@@ -99,8 +99,17 @@
 /*
  * The lightbox inverts to dark regardless of theme. Photographs read better against
  * a dark ground, and the surrounding chrome should not compete with the image.
+ *
+ * `color` and `background` must be re-declared here, not just the tokens. `body`
+ * sets `color: var(--ink)`, which resolves *once* against the root value — every
+ * descendant then inherits that computed colour, so redefining `--ink` alone leaves
+ * inherited text at the light-theme value and renders it invisible on the dark
+ * ground. Only elements that reference `var(--ink)` themselves would pick it up.
  */
 .on-dark {
+  color: var(--ink);
+  background: var(--paper);
+
   --ink: #f2f2f2;
   --paper: #0d0d0d;
   --surface: #171717;
