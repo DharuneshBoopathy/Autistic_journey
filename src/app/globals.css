@@ -1,126 +1,112 @@
 /*
- * Design tokens.
+ * Design system.
  *
- * Carried over from the reference portfolio's *actual* visual system rather than its
- * token file — that file defined a neon green, a title font and full spacing and
- * transition scales that nothing ever referenced, while every real value was
- * hardcoded at the point of use. What follows is the system as it was really built:
- * monochrome ink on paper.
+ * The archive is an object of record, not a marketing site, so it is drawn like a
+ * well-set catalogue: bright paper, black ink, hairline rules, generous margins, and
+ * a strict type scale. Photographs supply all the colour; the interface supplies
+ * none, which is what stops a wall of thumbnails turning to mud.
  *
- * Reference: github.com/ITomPoland/portfolio-itom (MIT). See NOTICE.
+ * Deliberately avoided: gradients, glassmorphism, uniformly rounded soft-shadow
+ * cards, emoji as iconography, and a saturated brand hue applied to everything.
+ * Those read as decoration applied on top of a layout rather than a layout that
+ * knows what it is.
  */
 
 :root {
-  /* --- Ink & paper ------------------------------------------------------- */
-  --ink: #1a1a1a;
-  --paper: #fafafa;
-  --surface: #ffffff;
+  /* --- Ground and ink ---------------------------------------------------- */
+  --paper: #ffffff;
+  --paper-sunk: #f6f6f4;   /* rails, wells, inset areas */
+  --paper-raised: #ffffff;
+  --ink: #12100e;          /* near-black, warmed very slightly */
+  --ink-strong: #000000;
 
-  /* Muted text ladder, darkest to lightest. */
-  --ink-70: #444444;
-  --ink-60: #555555;
-  --ink-50: #666666;
-  --ink-40: #777777;
-  --ink-30: #888888;
+  /* Text ladder. Each step is a real role, not a shade for its own sake. */
+  --ink-body: #2b2825;
+  --ink-muted: #6a6560;
+  --ink-faint: #948f89;
 
-  /* Rules, dividers, disabled states. */
-  --rule-strong: #bbbbbb;
-  --rule: #cccccc;
-  --rule-faint: #eeeeee;
+  /* Rules. Hairlines do the structural work that boxes would otherwise do. */
+  --rule: #e3e0db;
+  --rule-strong: #cbc6bf;
 
-  /* Pencil-mark shades, for scrollbars and sketch details. */
-  --pencil-15: rgb(26 26 26 / 0.15);
-  --pencil-25: rgb(26 26 26 / 0.25);
-  --pencil-40: rgb(26 26 26 / 0.4);
-  --pencil-65: rgb(26 26 26 / 0.65);
+  /* One accent, used sparingly and only where something is genuinely live. */
+  --accent: #b4441f;
+  --accent-sunk: #f7ece7;
 
-  /* Semantic. Kept deliberately muted — this is an ink-on-paper system, and a
-     saturated alert colour would read as a foreign object. */
-  --danger: #8c2f2f;
-  --success: #2f6b4f;
-  --warning: #8a6d1f;
+  --danger: #a32b1c;
+  --danger-sunk: #fbecea;
+  --success: #2f6b4a;
+  --success-sunk: #eaf3ee;
+  --notice: #7a5b12;
+  --notice-sunk: #fbf3e2;
 
   /* --- Type -------------------------------------------------------------- */
-  --font-body: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  --font-display: "Cabin Sketch", var(--font-body);
+  --font-body: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
 
+  --text-2xs: 0.6875rem;  /* 11px — eyebrows, counts */
   --text-xs: 0.75rem;
-  --text-sm: 0.875rem;
-  --text-base: 1rem;
-  --text-lg: 1.125rem;
+  --text-sm: 0.8125rem;
+  --text-base: 0.9375rem;
+  --text-lg: 1.0625rem;
   --text-xl: 1.375rem;
-  --text-2xl: 1.75rem;
+  --text-2xl: 1.875rem;
+  --text-3xl: 2.5rem;
 
-  /* The portfolio's heading signature: uppercase with open tracking. */
-  --tracking-wide: 0.0625em;
-  --tracking-wider: 0.125em;
+  /* Open tracking on small uppercase is the whole reason it reads as a label
+     rather than as shouting. */
+  --track-label: 0.09em;
+  --track-tight: -0.011em;
 
   /* --- Space ------------------------------------------------------------- */
-  --space-1: 0.25rem;
-  --space-2: 0.5rem;
-  --space-3: 0.75rem;
-  --space-4: 1rem;
-  --space-6: 1.5rem;
-  --space-8: 2rem;
-  --space-12: 3rem;
+  --s1: 0.25rem;
+  --s2: 0.5rem;
+  --s3: 0.75rem;
+  --s4: 1rem;
+  --s5: 1.5rem;
+  --s6: 2rem;
+  --s7: 3rem;
+  --s8: 4rem;
 
   /* --- Motion ------------------------------------------------------------ */
-  /* The three curves that give the reference its feel. */
-  --ease-panel: cubic-bezier(0.16, 1, 0.3, 1);
-  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
-  --ease-stagger: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease: cubic-bezier(0.2, 0.8, 0.24, 1);
+  --ease-spring: cubic-bezier(0.34, 1.4, 0.64, 1);
+  --fast: 120ms;
+  --normal: 220ms;
 
-  --dur-fast: 0.2s;
-  --dur-normal: 0.4s;
-  --dur-slow: 0.8s;
+  --radius: 3px;   /* just enough to not look like a table cell */
+  --radius-lg: 5px;
 
-  /* --- Shape ------------------------------------------------------------- */
-  /* The hand-drawn box, in one declaration. */
-  --radius-sketch: 2px 255px 3px 255px / 255px 5px 225px 3px;
-  --radius-sm: 4px;
-  --radius-md: 8px;
-
-  /* Hard-offset "sticker" shadow, from the reference's hint pills. */
-  --shadow-sticker: 3px 3px 0 var(--ink);
-  --shadow-panel: 0 4px 15px rgb(0 0 0 / 0.15);
-
-  /* --- Layers ------------------------------------------------------------ */
-  --z-grid: 1;
-  --z-chrome: 50;
-  --z-panel: 95;
-  --z-nav: 100;
-  --z-toast: 110;
-  --z-overlay: 2000;
-  --z-skip-link: 10000;
+  --header-h: 3.5rem;
 
   color-scheme: light;
 }
 
 /*
- * The lightbox inverts to dark regardless of theme. Photographs read better against
- * a dark ground, and the surrounding chrome should not compete with the image.
+ * The viewer inverts. Photographs read better against a dark ground and the
+ * surrounding chrome should not compete with them.
  *
- * `color` and `background` must be re-declared here, not just the tokens. `body`
- * sets `color: var(--ink)`, which resolves *once* against the root value — every
- * descendant then inherits that computed colour, so redefining `--ink` alone leaves
- * inherited text at the light-theme value and renders it invisible on the dark
- * ground. Only elements that reference `var(--ink)` themselves would pick it up.
+ * `color` and `background` are re-declared, not just the tokens: `body` resolves
+ * `color: var(--ink)` once, and descendants inherit that computed value — so
+ * redefining the token alone would leave inherited text at the light value and
+ * render it invisible here.
  */
 .on-dark {
+  --paper: #0c0c0d;
+  --paper-sunk: #141416;
+  --paper-raised: #1a1a1c;
+  --ink: #f4f2ef;
+  --ink-strong: #ffffff;
+  --ink-body: #ddd9d4;
+  --ink-muted: #9b9691;
+  --ink-faint: #6f6b67;
+  --rule: #2a2a2d;
+  --rule-strong: #3d3d41;
+  --accent: #ef7a4d;
+  --accent-sunk: #2a1811;
   color: var(--ink);
   background: var(--paper);
-
-  --ink: #f2f2f2;
-  --paper: #0d0d0d;
-  --surface: #171717;
-  --ink-70: #cfcfcf;
-  --ink-60: #b8b8b8;
-  --ink-50: #9a9a9a;
-  --ink-40: #808080;
-  --ink-30: #6a6a6a;
-  --rule-strong: #3a3a3a;
-  --rule: #2e2e2e;
-  --rule-faint: #222222;
   color-scheme: dark;
 }
 
@@ -143,19 +129,23 @@ html {
 body {
   min-height: 100dvh;
   background: var(--paper);
-  color: var(--ink);
+  color: var(--ink-body);
   font-family: var(--font-body);
   font-size: var(--text-base);
-  line-height: 1.5;
+  line-height: 1.55;
+  letter-spacing: var(--track-tight);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
+  /* Counts, sizes and dates line up in columns without extra work. */
+  font-variant-numeric: tabular-nums;
 }
 
 img,
 picture,
 video,
-canvas {
+canvas,
+svg {
   display: block;
   max-width: 100%;
 }
@@ -165,6 +155,7 @@ button,
 textarea,
 select {
   font: inherit;
+  letter-spacing: inherit;
   color: inherit;
 }
 
@@ -174,15 +165,33 @@ button {
 
 a {
   color: inherit;
+  text-decoration-color: var(--rule-strong);
+  text-underline-offset: 0.2em;
+}
+
+a:hover {
+  text-decoration-color: currentColor;
 }
 
 h1,
 h2,
 h3,
 h4 {
-  font-weight: 700;
-  line-height: 1.2;
+  color: var(--ink);
+  font-weight: 620;
+  line-height: 1.15;
+  letter-spacing: -0.018em;
   text-wrap: balance;
+}
+
+hr {
+  border: 0;
+  border-top: 1px solid var(--rule);
+}
+
+::selection {
+  background: var(--ink);
+  color: var(--paper);
 }
 
 /* --- Accessibility -------------------------------------------------------- */
@@ -198,18 +207,17 @@ h4 {
   border: 0;
 }
 
-/* Skip link: hidden until focused, then materialises top-left. */
 .skip-link {
   position: absolute;
-  top: var(--space-2);
-  left: var(--space-2);
-  z-index: var(--z-skip-link);
-  padding: var(--space-2) var(--space-4);
+  top: var(--s2);
+  left: var(--s2);
+  z-index: 10000;
+  padding: var(--s2) var(--s4);
   background: var(--ink);
-  color: var(--surface);
-  border-radius: var(--radius-md);
+  color: var(--paper);
+  border-radius: var(--radius);
   transform: translateY(-200%);
-  transition: transform var(--dur-fast) var(--ease-panel);
+  transition: transform var(--fast) var(--ease);
 }
 
 .skip-link:focus-visible {
@@ -217,8 +225,9 @@ h4 {
 }
 
 :focus-visible {
-  outline: 2px solid var(--ink);
+  outline: 2px solid var(--accent);
   outline-offset: 2px;
+  border-radius: 2px;
 }
 
 @media (prefers-reduced-motion: reduce) {

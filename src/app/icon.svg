@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="The Autistic Journey">
+  <!--
+    The wordmark's slash, set in a solid square.
+
+    A mark, not a picture: at 16px a photograph-shaped icon is mud, and the archive
+    already reads as "The Autistic Journey / Gallery" everywhere else.
+  -->
+  <rect width="32" height="32" rx="6" fill="#12100e"/>
+  <path d="M20.5 7 L14.2 25 H10.4 L16.7 7 Z" fill="#ffffff"/>
+  <circle cx="22" cy="22.5" r="2.6" fill="#b4441f"/>
+</svg>

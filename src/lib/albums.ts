@@ -33,6 +33,13 @@ export type AlbumSummary = {
   isMine: boolean;
   /** Photos in this album that *this viewer* may see. */
   visibleCount: number;
+  /**
+   * A photo from the album to use as the cover, or null for an album that is empty
+   * *for this viewer*. Chosen from `visible_photos`, so the cover can never be a
+   * photo the viewer is not entitled to — including the case where the album is
+   * full but every photo in it is closed to them.
+   */
+  coverPhotoId: string | null;
 };
 
 const uuidish = /^[0-9a-f-]{36}$/i;
@@ -53,12 +60,19 @@ export async function listAlbums(user: SessionUser): Promise<AlbumSummary[]> {
       owner_id: string;
       visibility: string;
       visible_count: number;
+      cover_photo_id: string | null;
     }>(sql`
       SELECT a.id, a.name, a.description, a.owner_id, a.visibility::text AS visibility,
              (SELECT count(*)::int
                 FROM album_photos ap
                 JOIN visible_photos p ON p.id = ap.photo_id
-               WHERE ap.album_id = a.id) AS visible_count
+               WHERE ap.album_id = a.id) AS visible_count,
+             (SELECT ap.photo_id
+                FROM album_photos ap
+                JOIN visible_photos p ON p.id = ap.photo_id
+               WHERE ap.album_id = a.id
+               ORDER BY ap.position, ap.created_at
+               LIMIT 1) AS cover_photo_id
         FROM albums a
        WHERE a.batch_id = ${user.batchId}::uuid
          AND a.deleted_at IS NULL
@@ -74,20 +88,38 @@ export async function listAlbums(user: SessionUser): Promise<AlbumSummary[]> {
       visibility: r.visibility,
       isMine: r.owner_id === user.id,
       visibleCount: Number(r.visible_count),
+      coverPhotoId: r.cover_photo_id,
     }));
   });
 }
+
+export type AlbumDetail = {
+  id: string;
+  name: string;
+  description: string | null;
+  visibility: string;
+  /** Whether the viewer may curate this album — owner or site admin. */
+  canManage: boolean;
+  photos: PhotoCard[];
+};
 
 /** An album's photos, in curation order, filtered to what the viewer may see. */
 export async function getAlbumPhotos(
   user: SessionUser,
   albumId: string,
-): Promise<AlbumResult<{ name: string; photos: PhotoCard[] }>> {
+): Promise<AlbumResult<AlbumDetail>> {
   if (!uuidish.test(albumId)) return { ok: false, reason: 'not_found' };
 
   return withViewer(user, async (tx: Tx) => {
-    const albumRows = await tx.execute<{ id: string; name: string }>(sql`
-      SELECT a.id, a.name FROM albums a
+    const albumRows = await tx.execute<{
+      id: string;
+      name: string;
+      description: string | null;
+      visibility: string;
+      owner_id: string;
+    }>(sql`
+      SELECT a.id, a.name, a.description, a.visibility::text AS visibility, a.owner_id
+        FROM albums a
        WHERE a.id = ${albumId}::uuid
          AND a.batch_id = ${user.batchId}::uuid
          AND a.deleted_at IS NULL
@@ -122,7 +154,11 @@ export async function getAlbumPhotos(
     return {
       ok: true as const,
       value: {
+        id: album.id,
         name: album.name,
+        description: album.description,
+        visibility: album.visibility,
+        canManage: album.owner_id === user.id || hasRole(user, 'admin'),
         photos: Array.from(rows).map((r) => ({
           id: r.id,
           takenAt: new Date(r.taken_at).toISOString(),

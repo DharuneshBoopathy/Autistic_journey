@@ -1,9 +1,8 @@
 import Link from 'next/link';
-import { requireUser } from '@/lib/auth';
-import { hasRole } from '@/lib/auth';
+import { hasRole, requireUser } from '@/lib/auth';
 import { logoutAction } from '@/app/(auth)/actions';
-import styles from '@/components/gallery.module.css';
-
+import { NavLink } from '@/components/nav-link';
+import styles from '@/components/shell.module.css';
 
 /**
  * Shell for every authenticated page.
@@ -15,32 +14,49 @@ import styles from '@/components/gallery.module.css';
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const user = await requireUser();
 
+  // Two letters from the display name. No generated avatar or identicon — the
+  // archive knows a name, and pretending to more than that is decoration.
+  const initials = user.displayName
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]!.toUpperCase())
+    .join('');
+
   return (
     <div className={styles.shell}>
       <header className={styles.header}>
-        <Link href="/gallery" className={styles.wordmark} style={{ textDecoration: 'none' }}>
-          The Autistic Journey
+        <Link href="/gallery" className={styles.wordmark}>
+          <span>The Autistic Journey</span>
+          <span className={styles.wordmarkSlash}>/</span>
+          <span className={styles.wordmarkSub}>Gallery</span>
         </Link>
 
-        <nav style={{ display: 'flex', gap: 'var(--space-4)', fontSize: 'var(--text-sm)' }}>
-          <Link href="/gallery">Timeline</Link>
-          <Link href="/upload">Upload</Link>
-          {hasRole(user, 'admin') && <Link href="/admin">Admin</Link>}
+        <nav className={styles.nav} aria-label="Sections">
+          <NavLink href="/gallery">Timeline</NavLink>
+          <NavLink href="/albums">Albums</NavLink>
+          <NavLink href="/groups">Groups</NavLink>
+          <NavLink href="/upload">Upload</NavLink>
+          <NavLink href="/trash">Trash</NavLink>
+          {hasRole(user, 'admin') && <NavLink href="/admin">Admin</NavLink>}
         </nav>
 
-        <div className={styles.headerSpacer} />
+        <div className={styles.spacer} />
 
-        <span className={styles.who}>{user.displayName}</span>
-        <form action={logoutAction}>
-          <button type="submit" className={styles.smallButton}>
-            Sign out
-          </button>
-        </form>
+        <div className={styles.identity}>
+          <span className={styles.who}>{user.displayName}</span>
+          <span className={styles.initials} aria-hidden="true">
+            {initials || '?'}
+          </span>
+          <form action={logoutAction}>
+            <button type="submit" className={styles.signOut}>
+              Sign out
+            </button>
+          </form>
+        </div>
       </header>
 
-      {/* Full width and allowed to shrink, so the timeline grid gets the whole
-          viewport rather than the narrow measure the auth cards use. */}
-      <main id="main" style={{ flex: 1, minHeight: 0, width: '100%' }}>
+      <main id="main" className={styles.main}>
         {children}
       </main>
     </div>

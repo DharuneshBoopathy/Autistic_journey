@@ -3,10 +3,13 @@
 A private, collaborative photo archive for one college batch — 1st Year through
 Final Year. Batch members only.
 
-> **Status: backend complete, frontend in progress.** Schema, authorization,
-> auth, upload, storage, visibility control, organisation, deletion/recovery and
-> the admin API are built and verified. The gallery UI exists; album, group and
-> admin screens do not yet. Do not put real photographs in this yet.
+> **Status: feature-complete for one batch, not yet operated in anger.** Schema,
+> authorization, auth, upload, storage, visibility control, organisation,
+> deletion/recovery, the admin surface and every screen are built and verified
+> against a real Postgres and a real browser. What has *not* happened is a
+> production deployment, a restore-from-backup drill, or any run at the photo
+> counts the brief describes. Do not put irreplaceable photographs in this until
+> backups are wired and tested.
 
 ## What it is
 
@@ -25,6 +28,22 @@ search — with access control as the first-class concern rather than an afterth
 Read [SECURITY.md](SECURITY.md) before contributing. It documents what is enforced
 and, deliberately, what is *not* — including which anti-copying measures are
 deterrents rather than controls.
+
+## The screens
+
+| | |
+|---|---|
+| `/gallery` | Chronological timeline, grouped by day, with permission-aware search and facets. Selection drives bulk visibility changes, album filing and deletion. |
+| Photo viewer | Full-size preview with a detail panel: caption, visibility, and the group/person picker. What is editable is decided by the server, not by the page. |
+| `/albums` | Albums as covers; an album is a grouping, never a grant, so counts are per-viewer. |
+| `/groups` | Named sets of batch members, used as sharing targets. Membership changes take effect on the next request. |
+| `/upload` | Drag-and-drop with a four-at-a-time queue, per-file status and retry-only-failed. |
+| `/trash` | Everything you deleted that is still inside the recovery window, with the days remaining. |
+| `/admin` | Storage headroom, archive and queue counts, the approval queue, members, invites, processing failures, download grants and the audit log. |
+
+Every one of these reads through the same SQL predicate as the API. There is no
+second copy of the access rule in the browser: hiding a control is presentation,
+and the server refuses the write regardless.
 
 ## Architecture
 

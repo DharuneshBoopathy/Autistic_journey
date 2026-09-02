@@ -3,15 +3,21 @@ import { NextResponse, type NextRequest } from 'next/server';
 /**
  * Route gating and Content-Security-Policy.
  *
- * IMPORTANT — the route gating below is a redirect for user experience, **not** an
- * authorization control. It runs on the Edge runtime, where it can neither open a
- * database connection nor hash a token, so all it can check is whether a session
- * cookie is *present*. It cannot tell a valid session from an expired, revoked, or
- * entirely forged one.
+ * Renamed from `middleware.ts`: Next 16 deprecates that convention in favour of
+ * `proxy`, which runs on the Node runtime rather than Edge.
  *
- * Real enforcement happens in the pages and route handlers themselves, via
- * `requireUser()` / `requireRole()` and the `visible_photos` predicate. Nothing in
- * the application trusts this file for access decisions.
+ * IMPORTANT — the route gating below is a redirect for user experience, **not** an
+ * authorization control. It checks only whether a session cookie is *present*; it
+ * does not validate it, so it cannot tell a live session from an expired, revoked or
+ * forged one.
+ *
+ * That is a deliberate choice rather than a limitation of the runtime. Now that this
+ * runs on Node it *could* reach the database, but validating here would put a second
+ * copy of the access rule on the request path — one that can drift from the real one.
+ * Enforcement stays in the pages and route handlers, via `requireUser()` /
+ * `requireRole()` and the `visible_photos` predicate, and nothing in the application
+ * trusts this file for access decisions. Deleting it would cost redirect polish and
+ * no security.
  */
 
 const PUBLIC_PATHS = ['/login', '/register'];
@@ -56,7 +62,7 @@ function buildCsp(nonce: string, isDev: boolean): string {
   ].join('; ');
 }
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   const isPublic = PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`));

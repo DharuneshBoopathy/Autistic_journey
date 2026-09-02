@@ -2,8 +2,12 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { PhotoCard, TimelinePage } from '@/lib/gallery';
-import { Lightbox } from './lightbox';
+import { VISIBILITY_SHORT } from '@/components/ui';
+import { ArchiveImage } from '@/components/archive-image';
+import { Viewer } from './viewer';
+import { Check } from './icons';
 import styles from '@/components/gallery.module.css';
+import ui from '@/components/ui.module.css';
 
 type Props = {
   initial: TimelinePage;
@@ -18,7 +22,7 @@ const dayFormat = new Intl.DateTimeFormat(undefined, {
 });
 
 /** Group consecutive photos by calendar day, preserving the server's ordering. */
-function groupByDay(photos: PhotoCard[]): Array<{ day: string; label: string; photos: PhotoCard[] }> {
+function groupByDay(photos: PhotoCard[]) {
   const groups: Array<{ day: string; label: string; photos: PhotoCard[] }> = [];
 
   for (const photo of photos) {
@@ -38,14 +42,16 @@ export function Timeline({ initial, query }: Props) {
   const [cursor, setCursor] = useState(initial.nextCursor);
   const [loading, setLoading] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
+  const [viewerIndex, setViewerIndex] = useState<number | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [albums, setAlbums] = useState<Array<{ id: string; name: string }>>([]);
   const sentinel = useRef<HTMLDivElement>(null);
 
   /*
-   * No effect is needed to reset when the filters change: the page renders this
-   * component with `key={JSON.stringify(query)}`, so a filter change remounts it and
-   * `useState` re-initialises from the new server data. Syncing props into state via
-   * an effect would render once with stale photos before correcting itself.
+   * No effect syncs props into state: the page renders this component with
+   * `key={JSON.stringify(query)}`, so a filter change remounts it and `useState`
+   * re-initialises from the new server data. Syncing via an effect would render once
+   * with stale photos before correcting itself.
    */
 
   const loadMore = useCallback(async () => {
@@ -80,7 +86,7 @@ export function Timeline({ initial, query }: Props) {
       (entries) => {
         if (entries[0]?.isIntersecting) void loadMore();
       },
-      { rootMargin: '600px' },
+      { rootMargin: '700px' },
     );
 
     observer.observe(node);
@@ -88,6 +94,49 @@ export function Timeline({ initial, query }: Props) {
   }, [cursor, loadMore]);
 
   const groups = useMemo(() => groupByDay(photos), [photos]);
+
+  // Albums are fetched only once something is selected — the list is useless until
+  // then, and most visits never select anything.
+  useEffect(() => {
+    if (selected.size === 0 || albums.length > 0) return;
+
+    let cancelled = false;
+    void (async () => {
+      const response = await fetch('/api/albums');
+      if (!response.ok || cancelled) return;
+
+      const body = await response.json();
+      // Only albums the viewer owns: filing into someone else's album is a write
+      // the server would refuse anyway, so it is not offered.
+      setAlbums(
+        body.albums
+          .filter((a: { isMine: boolean }) => a.isMine)
+          .map((a: { id: string; name: string }) => ({ id: a.id, name: a.name })),
+      );
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [selected.size, albums.length]);
+
+  /** File the selection into an album. Nothing about their visibility changes. */
+  const addToAlbum = useCallback(
+    async (albumId: string) => {
+      setBusy(true);
+      try {
+        await fetch(`/api/albums/${albumId}/photos`, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ photoIds: [...selected] }),
+        });
+        setSelected(new Set());
+      } finally {
+        setBusy(false);
+      }
+    },
+    [selected],
+  );
 
   const toggleSelect = (id: string) => {
     setSelected((current) => {
@@ -98,22 +147,88 @@ export function Timeline({ initial, query }: Props) {
     });
   };
 
+  /** Drop a photo from the local list after it is deleted or hidden from us. */
+  const dropPhoto = useCallback((photoId: string) => {
+    setPhotos((current) => current.filter((p) => p.id !== photoId));
+    setSelected((current) => {
+      const next = new Set(current);
+      next.delete(photoId);
+      return next;
+    });
+  }, []);
+
+  /**
+   * Refresh one photo after the panel edits it.
+   *
+   * A narrowed photo may no longer be visible to us at all, in which case the fetch
+   * 404s and it is removed — the same answer the server would give on reload.
+   */
+  const refreshPhoto = useCallback(async (photoId: string) => {
+    const response = await fetch(`/api/photos/${photoId}`);
+
+    if (!response.ok) {
+      dropPhoto(photoId);
+      return;
+    }
+
+    const { photo } = await response.json();
+    setPhotos((current) =>
+      current.map((p) =>
+        p.id === photoId ? { ...p, caption: photo.caption, visibility: photo.visibility } : p,
+      ),
+    );
+  }, [dropPhoto]);
+
+  const bulk = useCallback(
+    async (body: Record<string, unknown>) => {
+      setBusy(true);
+      try {
+        const response = await fetch('/api/photos/bulk', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ ...body, photoIds: [...selected] }),
+        });
+
+        if (!response.ok) return;
+
+        // Reload rather than patching locally: a bulk change can alter which photos
+        // are visible at all, and guessing the new set in the browser would be a
+        // second, weaker copy of the server's rule.
+        window.location.reload();
+      } finally {
+        setBusy(false);
+      }
+    },
+    [selected],
+  );
+
   const selecting = selected.size > 0;
 
   if (photos.length === 0) {
     return (
-      <p className={styles.empty}>
-        No photos here yet.{' '}
-        {Object.keys(query).length > 0 ? 'Try clearing the filters.' : 'Upload some to begin.'}
-      </p>
+      <div className={ui.empty}>
+        <p className={ui.emptyTitle}>Nothing here yet</p>
+        <p className={ui.emptyBody}>
+          {Object.keys(query).length > 0
+            ? 'No photos match these filters. Try clearing them.'
+            : 'Photos you upload will appear here, newest first.'}
+        </p>
+      </div>
     );
   }
 
   return (
     <>
       {groups.map((group) => (
-        <section key={group.day}>
-          <h2 className={styles.dayHeading}>{group.label}</h2>
+        <section key={group.day} className={styles.day}>
+          <div className={styles.dayHead}>
+            <h2 className={styles.dayLabel}>{group.label}</h2>
+            <span className={styles.dayRule} />
+            <span className={styles.dayCount}>
+              {group.photos.length} {group.photos.length === 1 ? 'photo' : 'photos'}
+            </span>
+          </div>
+
           <div className={styles.grid}>
             {group.photos.map((photo) => {
               const isSelected = selected.has(photo.id);
@@ -129,29 +244,28 @@ export function Timeline({ initial, query }: Props) {
                     if (selecting || event.metaKey || event.ctrlKey || event.shiftKey) {
                       toggleSelect(photo.id);
                     } else {
-                      setLightboxIndex(photos.indexOf(photo));
+                      setViewerIndex(photos.indexOf(photo));
                     }
                   }}
                   aria-label={photo.caption ?? `Photo by ${photo.uploaderName}`}
                   aria-pressed={selecting ? isSelected : undefined}
                 >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
+                  <ArchiveImage
                     src={`/api/photos/${photo.id}/thumb`}
                     alt=""
                     loading="lazy"
                     decoding="async"
-                    onContextMenu={(event) => event.preventDefault()}
-                    draggable={false}
                   />
 
                   {selecting && (
-                    <span className={`${styles.checkbox} ${isSelected ? styles.checkboxOn : ''}`} />
+                    <span className={`${styles.check} ${isSelected ? styles.checkOn : ''}`}>
+                      {isSelected && <Check size={10} />}
+                    </span>
                   )}
 
-                  {/* A quiet marker that this photo is not visible to everyone. */}
+                  {/* A quiet marker for anything not visible to the whole batch. */}
                   {photo.visibility !== 'batch' && (
-                    <span className={styles.privacyDot} title={`Visible to: ${photo.visibility}`} />
+                    <span className={styles.privacyTag}>{VISIBILITY_SHORT[photo.visibility]}</span>
                   )}
                 </button>
               );
@@ -161,24 +275,75 @@ export function Timeline({ initial, query }: Props) {
       ))}
 
       <div ref={sentinel} className={styles.sentinel} />
-      {loading && <p className={styles.loading}>Loading more…</p>}
-      {!cursor && photos.length > 0 && <p className={styles.loading}>That&rsquo;s everything.</p>}
+      {loading && <p className={styles.status}>Loading more…</p>}
+      {!cursor && <p className={styles.status}>End of the archive.</p>}
 
       {selecting && (
         <div className={styles.selectionBar} role="status">
-          <span>{selected.size} selected</span>
-          <button className={styles.smallButton} onClick={() => setSelected(new Set())}>
+          <span className={styles.selectionCount}>{selected.size} selected</span>
+
+          <select
+            className={styles.barSelect}
+            defaultValue=""
+            disabled={busy}
+            onChange={(event) => {
+              const value = event.target.value;
+              event.target.value = '';
+              if (value) void bulk({ action: 'setVisibility', visibility: value });
+            }}
+            aria-label="Change visibility of selected photos"
+          >
+            <option value="" disabled>
+              Change visibility…
+            </option>
+            <option value="batch">Everyone in the batch</option>
+            <option value="private">Only me</option>
+          </select>
+
+          {albums.length > 0 && (
+            <select
+              className={styles.barSelect}
+              defaultValue=""
+              disabled={busy}
+              onChange={(event) => {
+                const value = event.target.value;
+                event.target.value = '';
+                if (value) void addToAlbum(value);
+              }}
+              aria-label="Add selected photos to an album"
+            >
+              <option value="" disabled>
+                Add to album…
+              </option>
+              {albums.map((album) => (
+                <option key={album.id} value={album.id}>
+                  {album.name}
+                </option>
+              ))}
+            </select>
+          )}
+
+          <button
+            className={styles.barButton}
+            disabled={busy}
+            onClick={() => void bulk({ action: 'delete' })}
+          >
+            Delete
+          </button>
+
+          <button className={styles.barButton} onClick={() => setSelected(new Set())}>
             Clear
           </button>
         </div>
       )}
 
-      {lightboxIndex !== null && (
-        <Lightbox
+      {viewerIndex !== null && (
+        <Viewer
           photos={photos}
-          index={lightboxIndex}
-          onClose={() => setLightboxIndex(null)}
-          onNavigate={setLightboxIndex}
+          index={viewerIndex}
+          onClose={() => setViewerIndex(null)}
+          onNavigate={setViewerIndex}
+          onChanged={refreshPhoto}
         />
       )}
     </>

@@ -1,0 +1,523 @@
+/*
+ * Shared interface primitives.
+ *
+ * Structure comes from hairline rules and alignment rather than from boxes: a
+ * dense archive with a card around every element becomes visual noise long before
+ * it becomes navigable.
+ */
+
+/* --- Layout ---------------------------------------------------------------- */
+
+.page {
+  max-width: 78rem;
+  margin: 0 auto;
+  padding: var(--s6) var(--s5) var(--s8);
+}
+
+.pageNarrow {
+  max-width: 44rem;
+  margin: 0 auto;
+  padding: var(--s6) var(--s5) var(--s8);
+}
+
+/*
+ * Page masthead: an eyebrow, a title, and a description, with the actions pulled
+ * to the baseline on the right.
+ */
+.masthead {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--s5);
+  flex-wrap: wrap;
+  padding-bottom: var(--s4);
+  margin-bottom: var(--s6);
+  border-bottom: 2px solid var(--ink);
+}
+
+.eyebrow {
+  display: block;
+  font-size: var(--text-2xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: var(--track-label);
+  color: var(--ink-faint);
+  margin-bottom: var(--s2);
+}
+
+.title {
+  font-size: var(--text-2xl);
+}
+
+.titleSm {
+  font-size: var(--text-xl);
+}
+
+.lede {
+  color: var(--ink-muted);
+  font-size: var(--text-sm);
+  margin-top: var(--s2);
+  max-width: 52ch;
+}
+
+.actions {
+  display: flex;
+  gap: var(--s2);
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s4);
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+  flex-wrap: wrap;
+}
+
+.spacer {
+  flex: 1;
+}
+
+/* --- Section --------------------------------------------------------------- */
+
+.section {
+  margin-top: var(--s7);
+}
+
+.sectionHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s4);
+  padding-bottom: var(--s2);
+  margin-bottom: var(--s4);
+  border-bottom: 1px solid var(--rule);
+}
+
+.sectionTitle {
+  font-size: var(--text-2xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: var(--track-label);
+  color: var(--ink-faint);
+}
+
+/* --- Buttons --------------------------------------------------------------- */
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--s2);
+  padding: 0.4rem 0.85rem;
+  background: var(--ink);
+  color: var(--paper);
+  border: 1px solid var(--ink);
+  border-radius: var(--radius);
+  font-size: var(--text-sm);
+  font-weight: 550;
+  white-space: nowrap;
+  /* A button is a button whether it is rendered as <button> or as a link. */
+  text-decoration: none;
+  transition:
+    background var(--fast) var(--ease),
+    color var(--fast) var(--ease),
+    border-color var(--fast) var(--ease);
+}
+
+.button:hover:not(:disabled) {
+  background: var(--ink-strong);
+}
+
+.button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.buttonQuiet {
+  background: transparent;
+  color: var(--ink);
+  border-color: var(--rule-strong);
+}
+
+.buttonQuiet:hover:not(:disabled) {
+  background: var(--paper-sunk);
+  border-color: var(--ink);
+  color: var(--ink);
+}
+
+.buttonBare {
+  background: transparent;
+  color: var(--ink-muted);
+  border-color: transparent;
+  padding: 0.3rem 0.5rem;
+}
+
+.buttonBare:hover:not(:disabled) {
+  background: var(--paper-sunk);
+  color: var(--ink);
+}
+
+.buttonDanger {
+  background: transparent;
+  color: var(--danger);
+  border-color: color-mix(in srgb, var(--danger) 35%, transparent);
+}
+
+.buttonDanger:hover:not(:disabled) {
+  background: var(--danger-sunk);
+  border-color: var(--danger);
+}
+
+.buttonSmall {
+  padding: 0.2rem 0.55rem;
+  font-size: var(--text-xs);
+}
+
+/* --- Fields ---------------------------------------------------------------- */
+
+.field {
+  display: block;
+  margin-bottom: var(--s4);
+}
+
+.label {
+  display: block;
+  font-size: var(--text-2xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: var(--track-label);
+  color: var(--ink-faint);
+  margin-bottom: var(--s2);
+}
+
+.hint {
+  display: block;
+  font-size: var(--text-xs);
+  color: var(--ink-faint);
+  margin-top: var(--s2);
+  line-height: 1.45;
+}
+
+/*
+ * Inputs sit on a sunk ground with a hairline, and gain a solid ink border on
+ * focus. A ring plus a shadow on every field would fight the hairline grid.
+ */
+.input,
+.select,
+.textarea {
+  width: 100%;
+  padding: 0.45rem 0.6rem;
+  background: var(--paper-sunk);
+  color: var(--ink);
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--radius);
+  font-size: var(--text-sm);
+  transition:
+    border-color var(--fast) var(--ease),
+    background var(--fast) var(--ease);
+}
+
+.input::placeholder,
+.textarea::placeholder {
+  color: var(--ink-faint);
+}
+
+.input:focus,
+.select:focus,
+.textarea:focus {
+  outline: none;
+  background: var(--paper);
+  border-color: var(--ink);
+}
+
+.textarea {
+  resize: vertical;
+  min-height: 4.5rem;
+  line-height: 1.5;
+}
+
+.select {
+  appearance: none;
+  padding-right: 2rem;
+  /* Chevron drawn inline so no icon font or extra request is needed. */
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236a6560' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.6rem center;
+}
+
+/* --- Messages -------------------------------------------------------------- */
+
+.error,
+.notice,
+.success {
+  padding: var(--s3) var(--s4);
+  border-radius: var(--radius);
+  font-size: var(--text-sm);
+  margin-bottom: var(--s4);
+  /* A left rule instead of a full border: it reads as a margin annotation
+     rather than as another box on the page. */
+  border-left: 3px solid;
+}
+
+.error {
+  border-color: var(--danger);
+  color: var(--danger);
+  background: var(--danger-sunk);
+}
+
+.success {
+  border-color: var(--success);
+  color: var(--success);
+  background: var(--success-sunk);
+}
+
+.notice {
+  border-color: var(--notice);
+  color: var(--notice);
+  background: var(--notice-sunk);
+}
+
+/* --- Panel ----------------------------------------------------------------- */
+
+.panel {
+  background: var(--paper);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-lg);
+}
+
+.panelPad {
+  padding: var(--s5);
+}
+
+.panelHead {
+  padding: var(--s3) var(--s5);
+  border-bottom: 1px solid var(--rule);
+  font-size: var(--text-2xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: var(--track-label);
+  color: var(--ink-faint);
+}
+
+/* --- Data list ------------------------------------------------------------- */
+
+/*
+ * Rows separated by hairlines, not cards. At a hundred members or a thousand audit
+ * entries this stays scannable where a stack of cards does not.
+ */
+.list {
+  border-top: 1px solid var(--rule);
+}
+
+.listRow {
+  display: flex;
+  align-items: center;
+  gap: var(--s4);
+  padding: var(--s3) var(--s2);
+  border-bottom: 1px solid var(--rule);
+}
+
+.listRow:hover {
+  background: var(--paper-sunk);
+}
+
+.listMain {
+  min-width: 0;
+  flex: 1;
+}
+
+.listTitle {
+  color: var(--ink);
+  font-weight: 550;
+  font-size: var(--text-sm);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.listMeta {
+  color: var(--ink-faint);
+  font-size: var(--text-xs);
+  margin-top: 1px;
+}
+
+/* --- Badge ----------------------------------------------------------------- */
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3em;
+  padding: 0.1rem 0.4rem;
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--radius);
+  font-size: var(--text-2xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--ink-muted);
+  white-space: nowrap;
+}
+
+.badgeAccent {
+  border-color: color-mix(in srgb, var(--accent) 40%, transparent);
+  background: var(--accent-sunk);
+  color: var(--accent);
+}
+
+.badgeDanger {
+  border-color: color-mix(in srgb, var(--danger) 40%, transparent);
+  background: var(--danger-sunk);
+  color: var(--danger);
+}
+
+.badgeSuccess {
+  border-color: color-mix(in srgb, var(--success) 40%, transparent);
+  background: var(--success-sunk);
+  color: var(--success);
+}
+
+.badgeNotice {
+  border-color: color-mix(in srgb, var(--notice) 40%, transparent);
+  background: var(--notice-sunk);
+  color: var(--notice);
+}
+
+/* --- Empty state ----------------------------------------------------------- */
+
+.empty {
+  padding: var(--s8) var(--s5);
+  text-align: center;
+  border: 1px dashed var(--rule-strong);
+  border-radius: var(--radius-lg);
+  color: var(--ink-muted);
+}
+
+.emptyTitle {
+  color: var(--ink);
+  font-size: var(--text-lg);
+  margin-bottom: var(--s2);
+}
+
+.emptyBody {
+  font-size: var(--text-sm);
+  max-width: 42ch;
+  margin: 0 auto;
+}
+
+/* --- Statistics ------------------------------------------------------------ */
+
+.statGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+  gap: 1px;
+  background: var(--rule);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+/* Hairline gaps via a background showing through, so the group reads as one
+   ruled object rather than several floating tiles. */
+.stat {
+  background: var(--paper);
+  padding: var(--s4);
+}
+
+.statLabel {
+  font-size: var(--text-2xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: var(--track-label);
+  color: var(--ink-faint);
+}
+
+.statValue {
+  font-size: var(--text-2xl);
+  font-weight: 600;
+  color: var(--ink);
+  letter-spacing: -0.02em;
+  margin-top: var(--s1);
+  line-height: 1;
+}
+
+.statNote {
+  font-size: var(--text-xs);
+  color: var(--ink-muted);
+  margin-top: var(--s2);
+}
+
+/* --- Meter ----------------------------------------------------------------- */
+
+.meter {
+  height: 4px;
+  background: var(--rule);
+  border-radius: 2px;
+  overflow: hidden;
+  margin-top: var(--s3);
+}
+
+.meterFill {
+  height: 100%;
+  background: var(--ink);
+  transition: width var(--normal) var(--ease);
+}
+
+.meterWarn {
+  background: var(--notice);
+}
+
+.meterFull {
+  background: var(--danger);
+}
+
+/* --- Code ------------------------------------------------------------------ */
+
+.code {
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  letter-spacing: 0.06em;
+  background: var(--paper-sunk);
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--radius);
+  padding: var(--s3) var(--s4);
+  user-select: all;
+  word-break: break-all;
+}
+
+/* --- Tabs ------------------------------------------------------------------ */
+
+.tabs {
+  display: flex;
+  gap: var(--s5);
+  border-bottom: 1px solid var(--rule);
+  margin-bottom: var(--s5);
+  overflow-x: auto;
+}
+
+.tab {
+  padding: var(--s2) 0 var(--s3);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--ink-muted);
+  text-decoration: none;
+  white-space: nowrap;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+}
+
+.tab:hover {
+  color: var(--ink);
+}
+
+.tabActive {
+  color: var(--ink);
+  font-weight: 600;
+  border-bottom-color: var(--ink);
+}

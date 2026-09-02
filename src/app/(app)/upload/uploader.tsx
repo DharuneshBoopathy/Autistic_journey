@@ -1,14 +1,15 @@
 'use client';
 
 import { useCallback, useRef, useState } from 'react';
+import { Masthead, VISIBILITY_LABEL } from '@/components/ui';
 import styles from '@/components/gallery.module.css';
-import paper from '@/components/paper.module.css';
+import ui from '@/components/ui.module.css';
 
 type Status = 'pending' | 'uploading' | 'done' | 'duplicate' | 'failed';
 type Item = { id: string; file: File; status: Status; error?: string };
 
 /**
- * How many uploads are in flight at once.
+ * How many uploads run at once.
  *
  * One at a time makes a 500-photo batch painfully slow; too many saturate a phone's
  * uplink and cause timeouts. Four keeps the connection busy while leaving each
@@ -16,16 +17,11 @@ type Item = { id: string; file: File; status: Status; error?: string };
  */
 const CONCURRENCY = 4;
 
-const VISIBILITIES = [
-  ['private', 'Only me'],
-  ['batch', 'Everyone in the batch'],
-] as const;
-
 let nextId = 0;
 
 export function Uploader() {
   const [items, setItems] = useState<Item[]>([]);
-  const [visibility, setVisibility] = useState<string>('private');
+  const [visibility, setVisibility] = useState('private');
   const [dragging, setDragging] = useState(false);
   const [running, setRunning] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -98,34 +94,31 @@ export function Uploader() {
   const outstanding = (counts.pending ?? 0) + (counts.failed ?? 0);
 
   return (
-    <div style={{ maxWidth: '46rem', margin: '0 auto', padding: 'var(--space-8)' }}>
-      <h1 className={paper.title}>Upload</h1>
-      <p className={paper.subtitle}>
-        Photos are processed in the background and appear on the timeline once their previews
-        are ready.
-      </p>
+    <div className={ui.pageNarrow}>
+      <Masthead
+        eyebrow="Add to the archive"
+        title="Upload"
+        lede="Photos are processed in the background and appear on the timeline once their previews are ready."
+      />
 
-      <label className={paper.field}>
-        <span className={paper.label}>Who can see these?</span>
+      <label className={ui.field}>
+        <span className={ui.label}>Who can see these</span>
         <select
-          className={paper.input}
+          className={ui.select}
           value={visibility}
           onChange={(event) => setVisibility(event.target.value)}
         >
-          {VISIBILITIES.map(([value, label]) => (
-            <option key={value} value={value}>
-              {label}
-            </option>
-          ))}
+          <option value="private">{VISIBILITY_LABEL.private}</option>
+          <option value="batch">{VISIBILITY_LABEL.batch}</option>
         </select>
-        <span className={paper.hint}>
-          Applies to everything in this batch. You can change any photo&rsquo;s visibility later.
-          Group and selected-people sharing is set per photo after upload.
+        <span className={ui.hint}>
+          Applies to everything in this batch, and defaults to private. Sharing with specific groups
+          or people is set per photo afterwards, from the photo itself.
         </span>
       </label>
 
       <div
-        className={`${styles.dropZone} ${dragging ? styles.dropZoneActive : ''}`}
+        className={`${styles.drop} ${dragging ? styles.dropActive : ''}`}
         onDragOver={(event) => {
           event.preventDefault();
           setDragging(true);
@@ -140,10 +133,14 @@ export function Uploader() {
         role="button"
         tabIndex={0}
         onKeyDown={(event) => {
-          if (event.key === 'Enter' || event.key === ' ') inputRef.current?.click();
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            inputRef.current?.click();
+          }
         }}
       >
-        <p>Drag photos here, or click to choose.</p>
+        <p className={styles.dropTitle}>Drop photos here</p>
+        <p style={{ fontSize: 'var(--text-sm)' }}>or click to choose them</p>
         <input
           ref={inputRef}
           type="file"
@@ -163,12 +160,14 @@ export function Uploader() {
             {items.map((item) => (
               <div key={item.id} className={styles.queueRow}>
                 <span className={styles.queueName}>{item.file.name}</span>
-                <span className={statusClass(item.status)}>{statusLabel(item)}</span>
+                <span className={`${styles.queueStatus} ${statusClass(item.status)}`}>
+                  {statusLabel(item)}
+                </span>
               </div>
             ))}
           </div>
 
-          <p style={{ margin: 'var(--space-4) 0', fontSize: 'var(--text-sm)', color: 'var(--ink-50)' }}>
+          <p style={{ margin: 'var(--s4) 0', fontSize: 'var(--text-sm)', color: 'var(--ink-muted)' }}>
             {counts.done ?? 0} uploaded
             {counts.duplicate ? `, ${counts.duplicate} already in the archive` : ''}
             {counts.failed ? `, ${counts.failed} failed` : ''}
@@ -176,7 +175,7 @@ export function Uploader() {
           </p>
 
           <button
-            className={paper.button}
+            className={ui.button}
             onClick={() => void start()}
             disabled={running || outstanding === 0}
           >
@@ -195,7 +194,8 @@ export function Uploader() {
 function statusClass(status: Status): string {
   if (status === 'done' || status === 'duplicate') return styles.statusOk!;
   if (status === 'failed') return styles.statusFail!;
-  return styles.statusPending!;
+  if (status === 'uploading') return styles.statusBusy!;
+  return styles.statusIdle!;
 }
 
 function statusLabel(item: Item): string {

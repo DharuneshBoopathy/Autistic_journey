@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { assertSameOrigin, getApiUser } from '@/lib/auth';
+import { getPhoto } from '@/lib/gallery';
 import {
   restorePhoto,
   setVisibility,
@@ -70,6 +71,36 @@ async function authorize() {
     return { error: NextResponse.json({ error: 'Not signed in.' }, { status: 401 }) };
   }
   return { user };
+}
+
+/**
+ * Full metadata for one photo, for the viewer's detail panel.
+ *
+ * Reads through `getPhoto`, which selects from `visible_photos` — so a photo the
+ * caller may not see is indistinguishable from one that does not exist.
+ */
+export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const user = await getApiUser();
+  if (!user) return NextResponse.json({ error: 'Not signed in.' }, { status: 401 });
+
+  const photo = await getPhoto(user, (await params).id);
+  if (!photo) return fail('not_found');
+
+  // The uploader (or an admin) may edit; everyone else gets a read-only panel.
+  const canEdit = photo.isMine || user.role === 'admin';
+
+  /*
+   * Admins are the only accounts that may fetch an original directly, and the only
+   * ones that may hand a member a one-off grant to do so. Both are re-checked where
+   * they matter — the variant route and the grants route — so this flag decides what
+   * the panel offers, never what the server permits.
+   */
+  const isAdmin = user.role === 'admin';
+
+  return NextResponse.json(
+    { photo, canEdit, isAdmin },
+    { headers: { 'cache-control': 'private, no-store' } },
+  );
 }
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {

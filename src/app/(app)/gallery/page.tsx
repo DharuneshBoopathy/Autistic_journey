@@ -3,14 +3,24 @@ import Link from 'next/link';
 import { requireUser } from '@/lib/auth';
 import { getFacets, getTimeline, type TimelineFilters } from '@/lib/gallery';
 import { Timeline } from './timeline';
+import { Search } from './icons';
 import styles from '@/components/gallery.module.css';
+import ui from '@/components/ui.module.css';
 
 export const metadata: Metadata = { title: 'Timeline — The Autistic Journey' };
 
 // Every viewer sees a different archive, so nothing here may be prerendered.
 export const dynamic = 'force-dynamic';
 
-const FILTER_KEYS = ['academicYear', 'eventId', 'uploaderId', 'albumId', 'tag', 'campusZone', 'q'] as const;
+const FILTER_KEYS = [
+  'academicYear',
+  'eventId',
+  'uploaderId',
+  'albumId',
+  'tag',
+  'campusZone',
+  'q',
+] as const;
 
 export default async function GalleryPage({
   searchParams,
@@ -30,10 +40,7 @@ export default async function GalleryPage({
     }
   }
 
-  const [page, facets] = await Promise.all([
-    getTimeline(user, { filters }),
-    getFacets(user),
-  ]);
+  const [page, facets] = await Promise.all([getTimeline(user, { filters }), getFacets(user)]);
 
   const withFilter = (key: string, value: string) => {
     const next = new URLSearchParams(query);
@@ -43,39 +50,44 @@ export default async function GalleryPage({
     return qs ? `/gallery?${qs}` : '/gallery';
   };
 
+  const filtered = Object.keys(query).length > 0;
+
   return (
     <div className={styles.body}>
-      <aside className={styles.sidebar} aria-label="Filters">
-        <form action="/gallery" style={{ marginBottom: 'var(--space-6)' }}>
-          <label className={styles.facetTitle} htmlFor="q">
-            Search
-          </label>
+      <aside className={styles.sidebar} aria-label="Search and filters">
+        <form action="/gallery" className={styles.searchRow} role="search">
+          {/* Filters other than the query are preserved across a search. */}
+          {Object.entries(query)
+            .filter(([key]) => key !== 'q')
+            .map(([key, value]) => (
+              <input key={key} type="hidden" name={key} value={value} />
+            ))}
           <input
-            id="q"
+            className={ui.input}
             name="q"
             defaultValue={query.q ?? ''}
-            placeholder="Caption, place, filename"
-            style={{
-              width: '100%',
-              padding: 'var(--space-2)',
-              border: '2px solid var(--ink)',
-              borderRadius: 'var(--radius-sm)',
-              background: 'var(--paper)',
-            }}
+            placeholder="Search captions"
+            aria-label="Search the archive"
           />
+          <button className={`${ui.button} ${ui.buttonQuiet}`} type="submit" aria-label="Search">
+            <Search size={15} />
+          </button>
         </form>
 
-        <p className={styles.facetTitle}>
-          {facets.total.toLocaleString()} {facets.total === 1 ? 'photo' : 'photos'}
-        </p>
-        <p style={{ fontSize: 'var(--text-xs)', color: 'var(--ink-30)', marginBottom: 'var(--space-6)' }}>
-          Everything you&rsquo;re permitted to see. Counts exclude photos shared with others but
-          not with you.
-        </p>
+        <div className={styles.counts}>
+          <div className={styles.countValue}>{facets.total.toLocaleString()}</div>
+          <div className={styles.countLabel}>
+            {facets.total === 1 ? 'Photo' : 'Photos'} visible to you
+          </div>
+          <p className={styles.countNote}>
+            Counts describe only what you are permitted to see. Photos shared with others but not
+            with you are not included anywhere here.
+          </p>
+        </div>
 
-        {Object.keys(query).length > 0 && (
-          <p style={{ marginBottom: 'var(--space-6)' }}>
-            <Link href="/gallery" className={styles.facetLink}>
+        {filtered && (
+          <p className={styles.facetGroup}>
+            <Link href="/gallery" className={ui.badge}>
               Clear all filters
             </Link>
           </p>
@@ -132,7 +144,7 @@ function FacetGroup({
           href={href(facet.value)}
           className={`${styles.facetLink} ${active === facet.value ? styles.facetActive : ''}`}
         >
-          <span>{facet.label}</span>
+          <span className={styles.facetLabel}>{facet.label}</span>
           <span className={styles.facetCount}>{facet.count}</span>
         </Link>
       ))}

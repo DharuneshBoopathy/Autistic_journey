@@ -396,3 +396,64 @@ export async function countRecoverable(user: SessionUser): Promise<number> {
 
   return row?.count ?? 0;
 }
+
+export type DeletedPhoto = {
+  id: string;
+  caption: string | null;
+  takenAt: string;
+  deletedAt: string;
+  purgeAfter: string;
+  uploaderName: string;
+  isMine: boolean;
+};
+
+/**
+ * Photos in the recovery window, for the trash screen.
+ *
+ * This reads the base table rather than `visible_photos`, because the view hides
+ * soft-deleted rows by design. The write rule is applied instead — a member sees
+ * only what they themselves deleted, an admin sees the whole batch — so this is not
+ * a way around the visibility model but the same uploader-or-admin rule the restore
+ * path already enforces.
+ *
+ * Rows past `purge_after` are excluded: the sweep may not have run yet, but they are
+ * no longer restorable, and offering a button that cannot work is worse than
+ * omitting the row.
+ */
+export async function listDeleted(user: SessionUser): Promise<DeletedPhoto[]> {
+  const rows = await db
+    .select({
+      id: schema.photos.id,
+      caption: schema.photos.caption,
+      takenAt: schema.photos.takenAt,
+      createdAt: schema.photos.createdAt,
+      deletedAt: schema.photos.deletedAt,
+      purgeAfter: schema.photos.purgeAfter,
+      uploaderId: schema.photos.uploaderId,
+      uploaderName: schema.users.displayName,
+    })
+    .from(schema.photos)
+    .innerJoin(schema.users, eq(schema.users.id, schema.photos.uploaderId))
+    .where(
+      and(
+        eq(schema.photos.batchId, user.batchId),
+        sql`${schema.photos.deletedAt} IS NOT NULL`,
+        sql`${schema.photos.purgeAfter} > now()`,
+        hasRole(user, 'admin') ? undefined : eq(schema.photos.uploaderId, user.id),
+      ),
+    )
+    .orderBy(sql`${schema.photos.deletedAt} DESC`)
+    .limit(500);
+
+  return rows.map((r) => ({
+    id: r.id,
+    caption: r.caption,
+    // `taken_at` is null when the file carried no usable EXIF date; the upload time
+    // is the only date we honestly have for those.
+    takenAt: (r.takenAt ?? r.createdAt).toISOString(),
+    deletedAt: r.deletedAt!.toISOString(),
+    purgeAfter: r.purgeAfter!.toISOString(),
+    uploaderName: r.uploaderName,
+    isMine: r.uploaderId === user.id,
+  }));
+}

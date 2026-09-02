@@ -1,146 +1,182 @@
-/* --- App shell -------------------------------------------------------------- */
+/* The timeline, the grid, the viewer, the uploader. */
 
-.shell {
-  display: flex;
-  flex-direction: column;
-  min-height: 100dvh;
-}
-
-.header {
-  position: sticky;
-  top: 0;
-  z-index: var(--z-nav);
-  display: flex;
-  align-items: center;
-  gap: var(--space-4);
-  padding: var(--space-3) var(--space-6);
-  background: var(--paper);
-  border-bottom: 2px solid var(--ink);
-}
-
-.wordmark {
-  font-size: var(--text-sm);
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: var(--tracking-wider);
-  white-space: nowrap;
-}
-
-.headerSpacer {
-  flex: 1;
-}
-
-.who {
-  font-size: var(--text-xs);
-  color: var(--ink-40);
-  white-space: nowrap;
-}
+/* --- Timeline layout ------------------------------------------------------- */
 
 .body {
   display: grid;
-  grid-template-columns: 15rem 1fr;
-  flex: 1;
-  min-height: 0;
+  grid-template-columns: 15rem minmax(0, 1fr);
+  align-items: start;
 }
 
 .sidebar {
-  padding: var(--space-6);
-  border-right: 2px dashed var(--rule-strong);
+  position: sticky;
+  top: var(--header-h);
+  max-height: calc(100dvh - var(--header-h));
   overflow-y: auto;
+  padding: var(--s5) var(--s5) var(--s7);
+  border-right: 1px solid var(--rule);
 }
 
 .content {
-  padding: var(--space-6);
   min-width: 0;
+  padding: var(--s5) var(--s5) var(--s8);
 }
 
-@media (max-width: 860px) {
+@media (max-width: 900px) {
   .body {
     grid-template-columns: 1fr;
   }
   .sidebar {
+    position: static;
+    max-height: none;
     border-right: 0;
-    border-bottom: 2px dashed var(--rule-strong);
+    border-bottom: 1px solid var(--rule);
   }
 }
 
-/* --- Filters ---------------------------------------------------------------- */
+/* --- Filters --------------------------------------------------------------- */
+
+.searchRow {
+  display: flex;
+  gap: var(--s2);
+  margin-bottom: var(--s5);
+}
+
+.counts {
+  padding-bottom: var(--s4);
+  margin-bottom: var(--s4);
+  border-bottom: 1px solid var(--rule);
+}
+
+.countValue {
+  font-size: var(--text-2xl);
+  font-weight: 600;
+  color: var(--ink);
+  letter-spacing: -0.02em;
+  line-height: 1;
+}
+
+.countLabel {
+  font-size: var(--text-2xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: var(--track-label);
+  color: var(--ink-faint);
+  margin-top: var(--s2);
+}
+
+.countNote {
+  font-size: var(--text-xs);
+  color: var(--ink-faint);
+  margin-top: var(--s3);
+  line-height: 1.45;
+}
 
 .facetGroup {
-  margin-bottom: var(--space-6);
+  margin-bottom: var(--s5);
 }
 
 .facetTitle {
-  font-size: var(--text-xs);
-  font-weight: 700;
+  font-size: var(--text-2xs);
+  font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: var(--tracking-wider);
-  color: var(--ink-40);
-  margin-bottom: var(--space-2);
+  letter-spacing: var(--track-label);
+  color: var(--ink-faint);
+  margin-bottom: var(--s2);
 }
 
 .facetLink {
   display: flex;
+  align-items: baseline;
   justify-content: space-between;
-  gap: var(--space-2);
-  padding: var(--space-1) 0;
+  gap: var(--s3);
+  padding: 0.2rem 0;
   font-size: var(--text-sm);
+  color: var(--ink-muted);
   text-decoration: none;
-  color: var(--ink-60);
 }
 
 .facetLink:hover {
   color: var(--ink);
 }
 
+/* Leader dots between the label and its count, as in a table of contents. */
+.facetLabel {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .facetActive {
   color: var(--ink);
-  font-weight: 700;
+  font-weight: 600;
+}
+
+.facetActive .facetLabel::before {
+  content: '— ';
+  color: var(--accent);
 }
 
 .facetCount {
-  color: var(--ink-30);
-  font-variant-numeric: tabular-nums;
+  color: var(--ink-faint);
+  font-size: var(--text-xs);
+  flex: none;
 }
 
-/* --- Timeline --------------------------------------------------------------- */
+/* --- Day grouping ---------------------------------------------------------- */
 
-.dayHeading {
+.day {
+  margin-bottom: var(--s6);
+}
+
+.dayHead {
   position: sticky;
-  top: 3.5rem;
-  z-index: 2;
-  padding: var(--space-2) 0;
-  margin-top: var(--space-6);
+  top: var(--header-h);
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: var(--s4);
+  padding: var(--s3) 0;
   background: var(--paper);
-  font-size: var(--text-sm);
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: var(--tracking-wide);
-  border-bottom: 1px dashed var(--rule);
 }
 
-.dayHeading:first-child {
-  margin-top: 0;
+.dayLabel {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--ink);
+  white-space: nowrap;
 }
+
+.dayRule {
+  flex: 1;
+  height: 1px;
+  background: var(--rule);
+}
+
+.dayCount {
+  font-size: var(--text-2xs);
+  color: var(--ink-faint);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+/* --- Grid ------------------------------------------------------------------ */
 
 /*
- * A uniform square grid, cover-cropped.
+ * A uniform square grid.
  *
- * Justified rows (each tile flex-grown by its aspect ratio) were tried first and
- * look better in principle, but they cannot be done correctly in CSS alone: the
- * final row of a flex container stretches its last item to the full width, so a
- * lone portrait photo rendered as a full-bleed band. Doing it properly needs a JS
- * measurement pass on every resize.
- *
- * A fixed grid is exact on first paint, costs nothing to lay out at 100k photos,
- * and never reflows as images decode. Cropping is only in the grid — the lightbox
+ * Justified rows (each tile flex-grown by its aspect ratio) look better in
+ * principle but cannot be done correctly in CSS alone: the last row of a flex
+ * container stretches its final item to full width, so a lone portrait photo
+ * renders as a full-bleed band. Doing it properly needs a JS measurement pass on
+ * every resize. A fixed grid is exact on first paint, costs nothing at 100k photos,
+ * and never reflows as images decode. Cropping is only in the grid — the viewer
  * shows the whole frame.
  */
 .grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-  gap: 4px;
-  margin-top: var(--space-3);
+  grid-template-columns: repeat(auto-fill, minmax(148px, 1fr));
+  gap: 3px;
 }
 
 .tile {
@@ -149,31 +185,20 @@
   margin: 0;
   padding: 0;
   border: 0;
-  background: var(--rule-faint);
+  background: var(--paper-sunk);
   overflow: hidden;
   cursor: pointer;
 }
-
-/*
- * Every tile is the same square.
- *
- * Letting portrait frames span two rows gave the grid more rhythm but left holes,
- * because a spanning item cannot be backfilled without `grid-auto-flow: dense` —
- * and dense reorders tiles away from their DOM order. In a chronological archive
- * that is the wrong trade: it would break the correspondence between the grid and
- * the timeline, and make the lightbox's next/previous disagree with what the eye
- * sees. Uniform cells stay in order and leave no gaps.
- */
 
 .tile img {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  /* A blank tile until the image decodes reads as broken; a soft fade does not. */
-  animation: fadeIn var(--dur-normal) var(--ease-stagger);
+  transition: transform var(--normal) var(--ease), opacity var(--normal) var(--ease);
 }
 
-@keyframes fadeIn {
+/* A blank tile until the image decodes reads as broken; a soft fade does not. */
+@keyframes tileIn {
   from {
     opacity: 0;
   }
@@ -182,10 +207,21 @@
   }
 }
 
-.tile:hover img,
-.tile:focus-visible img {
-  transform: scale(1.03);
-  transition: transform var(--dur-normal) var(--ease-panel);
+.tile img {
+  animation: tileIn var(--normal) var(--ease);
+}
+
+.tile:hover img {
+  transform: scale(1.04);
+}
+
+.tile::after {
+  /* A hairline inset instead of a gap, so the grid reads as a contact sheet. */
+  content: '';
+  position: absolute;
+  inset: 0;
+  box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.06);
+  pointer-events: none;
 }
 
 .tileSelected {
@@ -193,111 +229,152 @@
   outline-offset: -3px;
 }
 
-/* Small ink dot marking a photo that is not visible to the whole batch. */
-.privacyDot {
+.tileSelected img {
+  opacity: 0.72;
+}
+
+/* Corner tag for anything not visible to the whole batch. */
+.privacyTag {
   position: absolute;
-  top: 6px;
-  right: 6px;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--ink);
-  box-shadow: 0 0 0 2px var(--surface);
+  top: 5px;
+  right: 5px;
+  padding: 0.05rem 0.3rem;
+  border-radius: 2px;
+  background: rgb(0 0 0 / 0.62);
+  color: #fff;
+  font-size: 9px;
+  font-weight: 650;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  pointer-events: none;
 }
 
-.checkbox {
+.check {
   position: absolute;
-  top: 6px;
-  left: 6px;
-  width: 20px;
-  height: 20px;
+  top: 5px;
+  left: 5px;
+  width: 17px;
+  height: 17px;
   border-radius: 50%;
-  border: 2px solid var(--surface);
-  background: rgb(0 0 0 / 0.25);
+  border: 1.5px solid #fff;
+  background: rgb(0 0 0 / 0.3);
+  display: grid;
+  place-items: center;
+  pointer-events: none;
 }
 
-.checkboxOn {
+.checkOn {
   background: var(--ink);
-}
-
-.empty {
-  padding: var(--space-12) 0;
-  text-align: center;
-  color: var(--ink-40);
 }
 
 .sentinel {
   height: 1px;
 }
 
-.loading {
-  padding: var(--space-6);
+.status {
+  padding: var(--s6) 0;
   text-align: center;
-  color: var(--ink-40);
+  color: var(--ink-faint);
   font-size: var(--text-sm);
 }
 
-/* --- Selection bar ---------------------------------------------------------- */
+/* --- Selection bar --------------------------------------------------------- */
 
 .selectionBar {
   position: fixed;
-  bottom: var(--space-6);
+  bottom: var(--s5);
   left: 50%;
   transform: translateX(-50%);
-  z-index: var(--z-toast);
+  z-index: 200;
   display: flex;
   align-items: center;
-  gap: var(--space-4);
-  padding: var(--space-3) var(--space-6);
-  background: var(--surface);
-  border: 2px solid var(--ink);
-  border-radius: var(--radius-sketch);
-  box-shadow: var(--shadow-sticker);
-  animation: rise var(--dur-normal) var(--ease-spring);
+  gap: var(--s3);
+  padding: var(--s2) var(--s3) var(--s2) var(--s4);
+  background: var(--ink);
+  color: var(--paper);
+  border-radius: 999px;
+  box-shadow: 0 6px 24px rgb(0 0 0 / 0.22);
+  font-size: var(--text-sm);
+  animation: rise var(--normal) var(--ease-spring);
 }
 
 @keyframes rise {
   from {
-    transform: translate(-50%, 120%);
+    transform: translate(-50%, 150%);
   }
   to {
     transform: translate(-50%, 0);
   }
 }
 
-.smallButton {
-  padding: var(--space-1) var(--space-3);
-  background: transparent;
-  border: 2px solid var(--ink);
-  border-radius: var(--radius-sm);
-  font-size: var(--text-xs);
+.selectionCount {
   font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: var(--tracking-wide);
+  white-space: nowrap;
 }
 
-.smallButton:hover {
-  background: var(--ink);
-  color: var(--surface);
+.barButton {
+  padding: 0.25rem 0.7rem;
+  background: transparent;
+  color: var(--paper);
+  border: 1px solid rgb(255 255 255 / 0.28);
+  border-radius: 999px;
+  font-size: var(--text-xs);
+  font-weight: 550;
+  white-space: nowrap;
 }
 
-/* --- Lightbox --------------------------------------------------------------- */
+.barButton:hover:not(:disabled) {
+  background: rgb(255 255 255 / 0.14);
+  border-color: rgb(255 255 255 / 0.5);
+}
 
-.lightbox {
+.barButton:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.barSelect {
+  padding: 0.25rem 0.6rem;
+  background: transparent;
+  color: var(--paper);
+  border: 1px solid rgb(255 255 255 / 0.28);
+  border-radius: 999px;
+  font-size: var(--text-xs);
+}
+
+.barSelect option {
+  color: var(--ink);
+}
+
+/* --- Viewer ---------------------------------------------------------------- */
+
+.viewer {
   position: fixed;
   inset: 0;
-  z-index: var(--z-overlay);
+  z-index: 1000;
   display: grid;
-  grid-template-rows: auto 1fr auto;
+  grid-template-columns: minmax(0, 1fr) auto;
   background: var(--paper);
 }
 
-.lightboxTop {
+.viewerMain {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  min-width: 0;
+}
+
+.viewerBar {
   display: flex;
   align-items: center;
-  gap: var(--space-4);
-  padding: var(--space-3) var(--space-4);
+  gap: var(--s4);
+  padding: var(--s3) var(--s4);
   border-bottom: 1px solid var(--rule);
+}
+
+.viewerCount {
+  font-size: var(--text-xs);
+  color: var(--ink-faint);
+  font-variant-numeric: tabular-nums;
 }
 
 .stage {
@@ -306,107 +383,228 @@
   place-items: center;
   overflow: hidden;
   min-height: 0;
+  padding: var(--s5);
+  /* One step down from the page, so a photo with pale edges still has an edge. */
+  background: var(--paper-sunk);
 }
 
 .stage img {
   max-width: 100%;
   max-height: 100%;
   object-fit: contain;
-  transition: transform var(--dur-normal) var(--ease-panel);
+  transition: transform var(--normal) var(--ease);
   /* A deterrent, not a control — see SECURITY.md. */
   user-select: none;
   -webkit-user-drag: none;
 }
 
-.zoomed {
-  cursor: zoom-out;
-}
-
-.notZoomed {
+.zoomIn {
   cursor: zoom-in;
 }
 
-.navButton {
+.zoomOut {
+  cursor: zoom-out;
+}
+
+.nav {
   position: absolute;
   top: 50%;
   transform: translateY(-50%);
-  width: 44px;
-  height: 44px;
+  width: 38px;
+  height: 38px;
   display: grid;
   place-items: center;
-  background: var(--surface);
-  border: 2px solid var(--ink);
+  background: var(--paper);
+  color: var(--ink);
+  border: 1px solid var(--rule-strong);
   border-radius: 50%;
-  font-size: var(--text-lg);
-  line-height: 1;
+  transition: border-color var(--fast) var(--ease), background var(--fast) var(--ease);
+}
+
+.nav:hover:not(:disabled) {
+  border-color: var(--ink);
+  background: var(--paper-sunk);
 }
 
 .navPrev {
-  left: var(--space-4);
+  left: var(--s4);
 }
 
 .navNext {
-  right: var(--space-4);
+  right: var(--s4);
 }
 
-.navButton:disabled {
-  opacity: 0.3;
+.nav:disabled {
+  opacity: 0.25;
   cursor: not-allowed;
 }
 
+/* --- Viewer side panel ----------------------------------------------------- */
+
+.aside {
+  width: 21rem;
+  max-width: 100%;
+  border-left: 1px solid var(--rule);
+  overflow-y: auto;
+  background: var(--paper);
+  padding: var(--s5);
+}
+
+@media (max-width: 860px) {
+  .viewer {
+    grid-template-columns: 1fr;
+    grid-template-rows: minmax(0, 1fr) auto;
+  }
+  .aside {
+    width: auto;
+    border-left: 0;
+    border-top: 1px solid var(--rule);
+    max-height: 45dvh;
+  }
+}
+
+.asideTitle {
+  font-size: var(--text-2xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: var(--track-label);
+  color: var(--ink-faint);
+  padding-bottom: var(--s2);
+  border-bottom: 1px solid var(--rule);
+  margin-bottom: var(--s4);
+}
+
+/* A definition list, which is what this metadata actually is. */
 .meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2) var(--space-6);
-  padding: var(--space-3) var(--space-4);
-  border-top: 1px solid var(--rule);
+  display: grid;
+  grid-template-columns: 6.5rem minmax(0, 1fr);
+  gap: var(--s2) var(--s3);
   font-size: var(--text-sm);
-  color: var(--ink-50);
+  margin-bottom: var(--s5);
 }
 
 .metaKey {
-  color: var(--ink-30);
-  text-transform: uppercase;
+  color: var(--ink-faint);
   font-size: var(--text-xs);
-  letter-spacing: var(--tracking-wide);
-  margin-right: var(--space-1);
 }
 
-/* --- Uploader --------------------------------------------------------------- */
-
-.dropZone {
-  padding: var(--space-8);
-  border: 2px dashed var(--rule-strong);
-  border-radius: var(--radius-sketch);
-  text-align: center;
-  color: var(--ink-40);
+.metaValue {
+  color: var(--ink-body);
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
-.dropZoneActive {
+.tagRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s1);
+}
+
+/* --- Principal picker ------------------------------------------------------ */
+
+.pickerList {
+  max-height: 11rem;
+  overflow-y: auto;
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--radius);
+  background: var(--paper-sunk);
+}
+
+.pickerRow {
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+  width: 100%;
+  padding: 0.35rem var(--s3);
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--rule);
+  font-size: var(--text-sm);
+  text-align: left;
+  color: var(--ink-body);
+}
+
+.pickerRow:last-child {
+  border-bottom: 0;
+}
+
+.pickerRow:hover {
+  background: var(--paper);
+}
+
+.pickerBox {
+  width: 14px;
+  height: 14px;
+  flex: none;
+  border: 1.5px solid var(--rule-strong);
+  border-radius: 2px;
+  display: grid;
+  place-items: center;
+}
+
+.pickerBoxOn {
+  background: var(--ink);
   border-color: var(--ink);
+  color: var(--paper);
+}
+
+/* --- Uploader -------------------------------------------------------------- */
+
+.drop {
+  padding: var(--s8) var(--s5);
+  border: 1px dashed var(--rule-strong);
+  border-radius: var(--radius-lg);
+  background: var(--paper-sunk);
+  text-align: center;
+  color: var(--ink-muted);
+  transition: border-color var(--fast) var(--ease), background var(--fast) var(--ease);
+}
+
+.drop:hover {
+  border-color: var(--ink-faint);
+}
+
+.dropActive {
+  border-color: var(--ink);
+  border-style: solid;
+  background: var(--paper);
   color: var(--ink);
-  background: var(--surface);
+}
+
+.dropTitle {
+  color: var(--ink);
+  font-size: var(--text-lg);
+  font-weight: 600;
+  margin-bottom: var(--s2);
 }
 
 .queue {
-  margin-top: var(--space-4);
-  max-height: 16rem;
+  margin-top: var(--s5);
+  max-height: 20rem;
   overflow-y: auto;
-  font-size: var(--text-sm);
+  border-top: 1px solid var(--rule);
 }
 
 .queueRow {
   display: flex;
+  align-items: center;
   justify-content: space-between;
-  gap: var(--space-4);
-  padding: var(--space-1) 0;
-  border-bottom: 1px dashed var(--rule-faint);
+  gap: var(--s4);
+  padding: 0.35rem 0;
+  border-bottom: 1px solid var(--rule);
+  font-size: var(--text-sm);
 }
 
 .queueName {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  color: var(--ink-body);
+}
+
+.queueStatus {
+  flex: none;
+  font-size: var(--text-xs);
 }
 
 .statusOk {
@@ -417,6 +615,69 @@
   color: var(--danger);
 }
 
-.statusPending {
-  color: var(--ink-30);
+.statusIdle {
+  color: var(--ink-faint);
+}
+
+.statusBusy {
+  color: var(--accent);
+}
+
+/* --- Album / group cards --------------------------------------------------- */
+
+/*
+ * Collections are shown as a cover with a caption beneath — a plate in a catalogue.
+ * The cover is a real photo from the collection where one exists.
+ */
+.cardGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+  gap: var(--s5);
+}
+
+.card {
+  display: block;
+  text-decoration: none;
+  color: inherit;
+}
+
+.cardCover {
+  position: relative;
+  aspect-ratio: 4 / 3;
+  background: var(--paper-sunk);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+}
+
+.cardCover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.card:hover .cardCover {
+  border-color: var(--ink);
+}
+
+.cardEmptyMark {
+  font-size: var(--text-2xs);
+  text-transform: uppercase;
+  letter-spacing: var(--track-label);
+  color: var(--ink-faint);
+}
+
+.cardName {
+  margin-top: var(--s3);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.cardMeta {
+  font-size: var(--text-xs);
+  color: var(--ink-faint);
+  margin-top: 1px;
 }
