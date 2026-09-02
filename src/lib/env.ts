@@ -32,6 +32,17 @@ const schema = z.object({
   DELETED_RETENTION_DAYS: z.coerce.number().int().positive().default(30),
   MAX_UPLOAD_BYTES: z.coerce.number().int().positive().default(52_428_800),
 
+  /**
+   * Soft ceiling on total stored bytes, in bytes. Default 9 GB.
+   *
+   * Free object-storage tiers fail opaquely once exhausted — writes start erroring
+   * with something that reads like a transient fault. This ceiling sits below the
+   * tier limit (Cloudflare R2's free tier is 10 GB) so uploads are refused with a
+   * sentence explaining why, and the admin dashboard can show headroom before anyone
+   * hits it. Raise it, or set it very high, once storage is paid for.
+   */
+  STORAGE_SOFT_QUOTA_BYTES: z.coerce.number().int().positive().default(9_663_676_416),
+
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
 });
 

@@ -56,7 +56,8 @@ suspended and pending accounts, and the fail-closed cases.
 | Append-only audit log; UPDATE/DELETE blocked by trigger and revoked from the app role | `audit_logs` |
 | Parameterised queries everywhere; no string-built SQL | Drizzle + postgres.js |
 | Storage keys generated server-side, never derived from user filenames | upload pipeline |
-| CSP, HSTS, frame-ancestors none, nosniff, noindex on every route | `next.config.ts` |
+| HSTS, frame-ancestors none, nosniff, noindex on every route | `next.config.ts` |
+| CSP with a per-request nonce (static headers cannot carry one) | `src/middleware.ts` |
 | IP addresses hashed rather than stored raw | `sessions.ip_hash` |
 | Secrets validated at boot; nothing secret is `NEXT_PUBLIC_` | `src/lib/env.ts` |
 
@@ -119,6 +120,60 @@ the only bytes a browser ever renders.
 Verified by `e2e/photos.spec.ts`, which uploads real images and then tries to
 fetch them as the wrong person, and by `src/lib/images.test.ts`, which builds
 actual polyglot and decompression-bomb files.
+
+## Administration
+
+Admin power is real but bounded.
+
+- **It does not reach across batches.** Every admin query is scoped to the
+  administrator's own `batch_id`, so an id from another batch resolves to nothing.
+- **It cannot lock out the last administrator.** Suspending or demoting yourself is
+  refused. That is a support call, not a security control.
+- **There is deliberately no "browse every photo" listing.** Moderation acts on a
+  photo someone reported, or an id an admin already holds. A general-purpose window
+  onto every private photo in the archive would make the visibility model advisory,
+  and no operational need requires it.
+- **Admin routes answer 404, not 403**, to members. Probing should not reveal that
+  the routes exist, let alone that the caller merely lacks the rank.
+- Every approval, suspension, role change, invite, moderation action and original
+  download is written to the append-only audit log, with the actor's address
+  captured into the row so entries stay readable after an account is removed.
+
+## Downloads
+
+The default is unchanged: members receive derivatives, originals are admin-only.
+
+`download_grants` is the documented exception — an admin can give **one member** a
+**single-use**, **expiring** right to **one original**, with a stated reason. It
+exists so that "someone needs the full-resolution file of one photo" does not get
+solved by promoting them to admin, which is what happens in products that have no
+mechanism for it.
+
+The grant is consumed by a single atomic `UPDATE ... RETURNING`, not a SELECT
+followed by an UPDATE: two concurrent requests must not both observe an unused grant
+and both download. It is consumed before the bytes stream, so a failed transfer
+costs the grant — re-issuing one is a message to an admin, whereas a grant that
+survives its use is not single-use at all.
+
+Admins do **not** mint grants for themselves; their role already authorises the
+download. Requiring it would make the table a log of ceremony rather than a record
+of exceptions.
+
+## Storage quota
+
+Free storage tiers do not degrade gracefully — once exhausted, writes fail with
+something that reads like a transient fault, and the obvious response (retry) makes
+it worse. `STORAGE_SOFT_QUOTA_BYTES` (default 9 GB, just under Cloudflare R2's 10 GB
+free tier) refuses uploads *before* the provider does, with `507 Insufficient
+Storage` and a sentence saying what happened.
+
+It is a soft limit by design: it stops new uploads and never blocks reads, deletions
+or anything else needed to free space. Usage is cached briefly to keep a bulk upload
+from re-summing the archive hundreds of times — but a cached result that would
+*refuse* an upload is always re-read first, because being briefly wrong in the
+permissive direction costs a few megabytes against a deliberately low ceiling, while
+being wrong in the blocking direction closes the archive to everyone. The purge sweep
+invalidates the cache when it frees space.
 
 ## Server Actions are public endpoints
 

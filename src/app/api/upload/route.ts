@@ -81,6 +81,11 @@ export async function POST(request: Request) {
   });
 
   if (!result.ok) {
+    // 507 Insufficient Storage says exactly what happened, and is distinct from the
+    // 415 that means "this file is not an image we accept".
+    if (result.reason === 'quota_exceeded') {
+      return NextResponse.json({ error: result.message }, { status: 507 });
+    }
     return NextResponse.json({ error: REJECTION_MESSAGES[result.reason] }, { status: 415 });
   }
 

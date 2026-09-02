@@ -3,9 +3,10 @@
 A private, collaborative photo archive for one college batch — 1st Year through
 Final Year. Batch members only.
 
-> **Status: in development.** The security core (schema, authorization predicate,
-> its test suite) is built and verified. Auth, upload, gallery and admin are in
-> progress. Do not put real photographs in this yet.
+> **Status: backend complete, frontend in progress.** Schema, authorization,
+> auth, upload, storage, visibility control, organisation, deletion/recovery and
+> the admin API are built and verified. The gallery UI exists; album, group and
+> admin screens do not yet. Do not put real photographs in this yet.
 
 ## What it is
 
@@ -58,6 +59,18 @@ object-storage tiers top out around 25 GB. Anything advertising unlimited free
 storage is either violating its terms of service or will not survive. Budget a few
 dollars a month past ~50,000 photos.
 
+### During development
+
+Put both originals and derivatives on **Cloudflare R2's free tier** — 10 GB, zero
+egress, roughly 2,500 photos at 4 MB each. Set `STORAGE_DERIVATIVES_DRIVER=r2` and
+`STORAGE_ORIGINALS_DRIVER=r2`.
+
+`STORAGE_SOFT_QUOTA_BYTES` (default 9 GB) refuses uploads just below the tier limit
+with a clear message, rather than letting the provider fail with something that
+looks transient. When the archive outgrows the free tier, move only the originals —
+they are the bulk, and members never download them:
+`STORAGE_ORIGINALS_DRIVER=gdrive`. No code changes; the adapters isolate it.
+
 ## Getting started
 
 Requires Node 20+ and a PostgreSQL 16+ database.
@@ -84,6 +97,7 @@ npm run dev
 | `npm run db:migrate` | Apply pending migrations |
 | `npm run worker` | Image-processing worker (long-running) |
 | `npm run worker:drain` | Process the queue once and exit |
+| `npm run worker:sweep` | Run housekeeping once (prune, purge) and exit |
 | `npm run test:e2e` | Browser suite (Playwright) |
 
 ### Running it properly

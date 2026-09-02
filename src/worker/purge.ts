@@ -1,6 +1,7 @@
 import { eq, sql } from 'drizzle-orm';
 import { db, schema } from '@/db';
 import { AuditAction, audit } from '@/lib/audit';
+import { invalidateStorageUsage } from '@/lib/quota';
 import { storageByName } from '@/lib/storage';
 
 /**
@@ -80,6 +81,10 @@ export async function purgeExpired(limit = BATCH): Promise<{ purged: number; fai
       console.error(`[purge] ${photo.id} failed:`, error instanceof Error ? error.message : error);
     }
   }
+
+  // Space was freed; the next quota check must see it rather than a cached figure
+  // from before the sweep.
+  if (purged > 0) invalidateStorageUsage();
 
   return { purged, failed };
 }

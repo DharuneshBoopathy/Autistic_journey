@@ -5,11 +5,13 @@ import { env } from '@/lib/env';
 import { AuditAction, audit } from '@/lib/audit';
 import { validateImage, type ValidationFailure } from '@/lib/images';
 import { buildKey, originalStorage } from '@/lib/storage';
+import { checkQuota, invalidateStorageUsage } from '@/lib/quota';
 import type { SessionUser } from '@/lib/session';
 
 export type IngestResult =
   | { ok: true; photoId: string; duplicateOf?: string }
-  | { ok: false; reason: ValidationFailure };
+  | { ok: false; reason: ValidationFailure }
+  | { ok: false; reason: 'quota_exceeded'; message: string };
 
 export type IngestInput = {
   filename: string;
@@ -51,6 +53,22 @@ export async function ingestUpload(
   if (!validated.ok) return { ok: false, reason: validated.reason };
 
   const { image } = validated;
+
+  /*
+   * Quota is checked after validation and before storage.
+   *
+   * After validation, so a malformed file is rejected on its own terms rather than
+   * being blamed on a full archive. Before storage, because the whole point is to
+   * refuse the write with an explanation instead of letting the provider fail with
+   * something that reads like a transient error.
+   *
+   * Duplicates are checked below and consume no new space, but they are rare enough
+   * that ordering the cheap quota check first is not worth the extra branch.
+   */
+  const quota = await checkQuota(image.bytes);
+  if (!quota.allowed) {
+    return { ok: false, reason: 'quota_exceeded', message: quota.message };
+  }
 
   // De-duplicate within the batch. Re-uploading the same file — which happens
   // constantly when several people share the same event photos — should not cost
@@ -127,6 +145,9 @@ export async function ingestUpload(
 
     throw error;
   }
+
+  // The archive just grew; the next quota check should see it.
+  invalidateStorageUsage();
 
   await audit({
     action: AuditAction.PHOTO_UPLOADED,

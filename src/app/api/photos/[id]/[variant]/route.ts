@@ -3,6 +3,7 @@ import { sql } from 'drizzle-orm';
 import { withViewer } from '@/db';
 import { AuditAction, audit } from '@/lib/audit';
 import { getApiUser, hasRole } from '@/lib/auth';
+import { consumeDownloadGrant } from '@/lib/download-grants';
 import { storageByName } from '@/lib/storage';
 
 export const runtime = 'nodejs';
@@ -81,11 +82,20 @@ export async function GET(
   /*
    * View is not download.
    *
-   * Members receive derivatives only. Originals are admin-only, and each release is
-   * recorded — "who took a full-resolution copy of what, and when" stays answerable.
+   * Members receive derivatives only. Originals need either the admin role, or a
+   * single-use grant an admin issued to this member for this photo — the documented,
+   * expiring exception. Every release is recorded either way, so "who took a
+   * full-resolution copy of what, and when" stays answerable.
+   *
+   * The grant is consumed here rather than merely checked: consuming it is the point,
+   * and doing so before streaming means a failed transfer costs the grant. That is
+   * the safer direction — re-issuing one is a message to an admin, whereas a grant
+   * that survives its use is not single-use at all.
    */
+  let viaGrant = false;
   if (variant === 'original' && !hasRole(user, 'admin')) {
-    return notFound();
+    viaGrant = await consumeDownloadGrant(user, id);
+    if (!viaGrant) return notFound();
   }
 
   let body: ReadableStream<Uint8Array>;
@@ -104,6 +114,7 @@ export async function GET(
       actorEmail: user.email,
       targetType: 'photo',
       targetId: id,
+      metadata: { via: viaGrant ? 'download_grant' : 'admin_role' },
     });
   }
 
