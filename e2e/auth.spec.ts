@@ -19,6 +19,19 @@ test.afterAll(async () => {
   await sql.end();
 });
 
+/**
+ * Clear the login rate-limit counters between tests.
+ *
+ * The limiter is a production control working exactly as intended: this suite logs
+ * in far more often in a few minutes than any real person would, and would otherwise
+ * lock itself out partway through. Resetting the counter is the test accommodating
+ * the control, not the control being weakened for the test.
+ */
+test.beforeEach(async () => {
+  await sql`TRUNCATE rate_limits`;
+  await sql`UPDATE users SET failed_login_count = 0, locked_until = NULL`;
+});
+
 test('anonymous visitors are redirected away from the gallery', async ({ page }) => {
   await page.goto('/gallery');
   await expect(page).toHaveURL(/\/login/);

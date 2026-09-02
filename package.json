@@ -17,9 +17,12 @@
     "db:studio": "drizzle-kit studio",
     "worker": "tsx src/worker/index.ts",
     "test:e2e": "playwright test",
-    "test:authz": "./scripts/test-authz.sh"
+    "test:authz": "./scripts/test-authz.sh",
+    "worker:drain": "tsx src/worker/drain.ts"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1124.0",
+    "@aws-sdk/s3-request-presigner": "^3.1124.0",
     "@node-rs/argon2": "^2.2.0",
     "drizzle-orm": "^0.45.2",
     "next": "^16.3.4",

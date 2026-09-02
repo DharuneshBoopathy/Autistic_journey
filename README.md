@@ -82,7 +82,20 @@ npm run dev
 | `./scripts/test-authz.sh` | **Authorization suite** — requires `DATABASE_URL` |
 | `npm run db:generate` | Generate a migration from schema changes |
 | `npm run db:migrate` | Apply pending migrations |
-| `npm run worker` | Image-processing worker |
+| `npm run worker` | Image-processing worker (long-running) |
+| `npm run worker:drain` | Process the queue once and exit |
+| `npm run test:e2e` | Browser suite (Playwright) |
+
+### Running it properly
+
+The app and the worker are separate processes. Uploads are accepted by the app but
+derivatives are rendered by the worker, so a photo stays in `processing` — and stays
+invisible — until a worker runs:
+
+```bash
+npm run dev       # terminal 1
+npm run worker    # terminal 2
+```
 
 ### The authorization suite
 
@@ -97,6 +110,11 @@ It asserts the full visibility matrix, batch isolation, forged batch ids, suspen
 and pending accounts, soft-deleted and still-processing photos, permission-aware
 counts, and the fail-closed cases. It runs in CI. **If you change anything about
 visibility, this suite is the thing that must still pass.**
+
+`e2e/photos.spec.ts` is its companion at the HTTP layer: it uploads real images,
+processes them, and then tries to fetch the bytes as the wrong person. A gallery
+that hides a photo from the grid but still serves it to anyone holding the URL has
+protected nothing, so that path is tested directly.
 
 ## Contributing
 

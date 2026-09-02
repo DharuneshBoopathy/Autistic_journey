@@ -27,6 +27,16 @@ export function middleware(request: NextRequest) {
   const hasSessionCookie = SESSION_COOKIES.some((name) => request.cookies.has(name));
 
   if (!isPublic && !hasSessionCookie) {
+    /*
+     * API routes answer with a status code, never a redirect to an HTML page.
+     * Redirecting here would hand an XHR the login page with status 200, which the
+     * caller would then try to parse as JSON — turning "you are signed out" into a
+     * confusing parse error instead of a clear 401.
+     */
+    if (pathname.startsWith('/api/')) {
+      return NextResponse.json({ error: 'Not signed in.' }, { status: 401 });
+    }
+
     const url = request.nextUrl.clone();
     url.pathname = '/login';
     // Preserve where they were heading, so sign-in can return them there. Only the

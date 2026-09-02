@@ -81,6 +81,45 @@ Stated plainly, because the brief forbids fake security claims:
   on ingest, but captions and tags are user-supplied and visible to everyone
   permitted to see the photo.
 
+## Uploads
+
+`src/lib/images.ts` is the only place untrusted bytes are inspected, and the most
+exposed surface in the archive.
+
+- **Format is decided by magic bytes, never by the extension or the declared
+  Content-Type** — both are attacker-controlled. SVG is rejected outright: it is a
+  document that can carry script, not a photograph.
+- **Nothing is written anywhere until validation passes.** Because validation
+  precedes storage, there is no window in which unvalidated bytes sit in the
+  archive, and therefore no quarantine area to sweep.
+- **A pixel ceiling (100 MP) stops decompression bombs** — a few kilobytes of PNG
+  can otherwise describe an image that expands to gigabytes in the decoder.
+- **Derivatives are re-encoded from decoded pixels**, which is what actually
+  neutralises a polyglot: script smuggled into an original's trailing bytes does
+  not survive being decoded and written back out as WebP. Members only ever
+  receive derivatives.
+- **All metadata is stripped from derivatives** — GPS, camera serial numbers,
+  owner names. EXIF orientation is applied first, then discarded, so photos are
+  not left sideways. Only the capture timestamp is lifted into the database; GPS
+  is deliberately never extracted, so the archive cannot become a location log.
+- **Storage keys are built from server-generated UUIDs**, never from the uploaded
+  filename, which makes path traversal structurally impossible rather than
+  something a sanitiser has to catch. The local driver additionally refuses any
+  key that resolves outside its root.
+- **Visibility defaults to `private`** when omitted or unrecognised. A photo never
+  becomes batch-visible by accident.
+
+Originals are stored byte-exact. The brief asks for originals to be *preserved*
+and for polyglots to be *neutralised*, which pull in opposite directions — so the
+two live on different paths: originals are kept untouched but unreachable
+(members cannot download them; admin downloads are forced to
+`Content-Disposition: attachment` with `nosniff`), and re-encoded derivatives are
+the only bytes a browser ever renders.
+
+Verified by `e2e/photos.spec.ts`, which uploads real images and then tries to
+fetch them as the wrong person, and by `src/lib/images.test.ts`, which builds
+actual polyglot and decompression-bomb files.
+
 ## Server Actions are public endpoints
 
 Every export of a `'use server'` module is compiled into a callable RPC endpoint
