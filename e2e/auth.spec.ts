@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 import postgres from 'postgres';
 
 /**
@@ -11,6 +11,18 @@ import postgres from 'postgres';
  */
 
 const sql = postgres(process.env.DATABASE_URL!, { max: 2 });
+
+/**
+ * The form's own error message.
+ *
+ * Deliberately not `getByRole('alert')`: Next's development overlay renders its own
+ * element with that role, so the bare lookup matches two nodes and resolves to
+ * whichever exists first — which made this suite fail intermittently with an empty
+ * string. Scoping to the form pins it to our message.
+ */
+function formError(page: Page) {
+  return page.locator('form [role="alert"]');
+}
 
 const ADMIN_EMAIL = 'admin@example.com';
 const ADMIN_PASSWORD = 'correct-horse-battery-staple';
@@ -45,7 +57,7 @@ test('a wrong password is rejected without revealing whether the account exists'
   await page.fill('input[name="password"]', 'definitely-not-the-password');
   await page.click('button[type="submit"]');
 
-  const realAccount = await page.getByRole('alert').textContent();
+  const realAccount = await formError(page).textContent();
   expect(realAccount).toContain('Incorrect email or password');
 
   await page.goto('/login');
@@ -55,7 +67,7 @@ test('a wrong password is rejected without revealing whether the account exists'
 
   // The message for a non-existent account must be byte-identical to the message
   // for a real account with a bad password.
-  expect(await page.getByRole('alert').textContent()).toBe(realAccount);
+  expect(await formError(page).textContent()).toBe(realAccount);
 });
 
 test('a valid login reaches the gallery and sets a hardened session cookie', async ({ page }) => {
@@ -65,7 +77,9 @@ test('a valid login reaches the gallery and sets a hardened session cookie', asy
   await page.click('button[type="submit"]');
 
   await expect(page).toHaveURL(/\/gallery/);
-  await expect(page.getByText(ADMIN_EMAIL)).toBeVisible();
+  // Scoped to the header: the same name also appears in the "Uploaded by" facet, so
+  // an unscoped text lookup matches twice and fails Playwright's strict mode.
+  await expect(page.locator('header').getByText('Archive Admin')).toBeVisible();
 
   const cookie = (await page.context().cookies()).find((c) => c.name.includes('aj_session'));
   expect(cookie, 'session cookie should be set').toBeDefined();
@@ -124,7 +138,7 @@ test('a pending account cannot sign in until it is approved', async ({ page }) =
   await page.fill('input[name="password"]', ADMIN_PASSWORD);
   await page.click('button[type="submit"]');
 
-  await expect(page.getByRole('alert')).toContainText('awaiting approval');
+  await expect(formError(page)).toContainText('awaiting approval');
   await expect(page).not.toHaveURL(/\/gallery/);
 
   await sql`DELETE FROM users WHERE email = ${email}`;
@@ -157,7 +171,7 @@ test('an invalid invite code is rejected', async ({ page }) => {
   await page.fill('input[name="password"]', 'a-sufficiently-long-password');
   await page.click('button[type="submit"]');
 
-  await expect(page.getByRole('alert')).toContainText('not valid');
+  await expect(formError(page)).toContainText('not valid');
 });
 
 test('a short password is rejected by the server, not only the browser', async ({ page }) => {
@@ -169,5 +183,5 @@ test('a short password is rejected by the server, not only the browser', async (
   await page.fill('input[name="password"]', 'short');
   await page.click('button[type="submit"]');
 
-  await expect(page.getByRole('alert')).toContainText('at least 12 characters');
+  await expect(formError(page)).toContainText('at least 12 characters');
 });
