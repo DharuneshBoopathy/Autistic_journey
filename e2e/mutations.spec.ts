@@ -73,6 +73,23 @@ function processQueue(): Promise<void> {
   });
 }
 
+/** Run the housekeeping sweep, which includes the purge of expired deletions. */
+function runSweep(): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const child = spawn('npx', ['tsx', 'src/worker/sweep.ts'], {
+      cwd: path.resolve(__dirname, '..'),
+      env: process.env,
+      stdio: 'pipe',
+    });
+    let stderr = '';
+    child.stderr?.on('data', (c) => (stderr += String(c)));
+    child.on('error', reject);
+    child.on('exit', (code) =>
+      code === 0 ? resolve() : reject(new Error(`sweep failed (${code}): ${stderr}`)),
+    );
+  });
+}
+
 async function idOf(email: string): Promise<string> {
   const [row] = await sql<{ id: string }[]>`SELECT id FROM users WHERE email = ${email}`;
   return row!.id;
@@ -332,4 +349,36 @@ test('a cross-origin mutation is refused', async ({ page }) => {
     data: { visibility: 'batch' },
   });
   expect(response.status()).toBe(403);
+});
+
+test('the purge removes stored objects before the row, and leaves an audit trail', async ({
+  page,
+}) => {
+  await login(page, ALICE.email, ALICE.password);
+  const photoId = await upload(page.request, await fixture(12), 'batch');
+  await processQueue();
+
+  const [before] = await sql<{ original_key: string }[]>`
+    SELECT original_key FROM photos WHERE id = ${photoId}::uuid`;
+  expect(before!.original_key).toBeTruthy();
+
+  await page.request.delete(`/api/photos/${photoId}`, { headers: { origin: ORIGIN } });
+  // Bring the recovery deadline forward rather than waiting 30 days for it.
+  await sql`UPDATE photos SET purge_after = now() - interval '1 day' WHERE id = ${photoId}::uuid`;
+
+  await runSweep();
+
+  // Row gone, and the cascades took the derivatives with it.
+  const rows = await sql`SELECT 1 FROM photos WHERE id = ${photoId}::uuid`;
+  expect(rows).toHaveLength(0);
+
+  const derivatives = await sql`SELECT 1 FROM photo_derivatives WHERE photo_id = ${photoId}::uuid`;
+  expect(derivatives).toHaveLength(0);
+
+  // The audit log is the only remaining trace that this photo ever existed, so the
+  // entry must survive the row it describes — which is why actor_id is not a foreign
+  // key and why the log is append-only.
+  const [entry] = await sql<{ action: string }[]>`
+    SELECT action FROM audit_logs WHERE target_id = ${photoId} AND action = 'photo.purged'`;
+  expect(entry).toBeDefined();
 });

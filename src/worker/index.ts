@@ -8,11 +8,18 @@
  * The work itself lives in `./process`, which tests drive directly.
  */
 import { client } from '@/db';
-import { requeueStalled, runOnce } from './process';
+import { runOnce } from './process';
+import { runMaintenance } from './maintenance';
 
 const IDLE_DELAY_MS = 2_000;
 
-/** Sweep for jobs abandoned by a crashed worker roughly once a minute when idle. */
+/**
+ * Housekeeping cadence, counted in idle passes (~2s each), so roughly every minute.
+ *
+ * Counted in passes rather than wall-clock so a worker draining a large backlog does
+ * not stop to tidy up mid-flight — maintenance waits until there is nothing else to
+ * do, which is exactly when it should run.
+ */
 const PASSES_BETWEEN_SWEEPS = 30;
 
 async function main() {
@@ -32,7 +39,7 @@ async function main() {
     const processed = await runOnce();
 
     if (++sinceSweep >= PASSES_BETWEEN_SWEEPS) {
-      await requeueStalled();
+      await runMaintenance();
       sinceSweep = 0;
     }
 

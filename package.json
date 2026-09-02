@@ -18,7 +18,8 @@
     "worker": "tsx src/worker/index.ts",
     "test:e2e": "playwright test",
     "test:authz": "./scripts/test-authz.sh",
-    "worker:drain": "tsx src/worker/drain.ts"
+    "worker:drain": "tsx src/worker/drain.ts",
+    "worker:sweep": "tsx src/worker/sweep.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1124.0",

@@ -1,6 +1,6 @@
 import 'server-only';
 import { cookies, headers } from 'next/headers';
-import { and, eq, isNull, gt, sql } from 'drizzle-orm';
+import { and, eq, isNull, gt } from 'drizzle-orm';
 import { db, schema } from '@/db';
 import { env } from '@/lib/env';
 import { generateToken, hashIp, hashToken } from '@/lib/tokens';
@@ -165,11 +165,8 @@ export async function revokeAllSessions(userId: string): Promise<number> {
   return revoked.length;
 }
 
-/** Housekeeping: drop sessions that expired or were revoked a while ago. */
-export async function pruneSessions(): Promise<void> {
-  await db.execute(
-    sql`DELETE FROM sessions
-        WHERE expires_at < now() - interval '7 days'
-           OR (revoked_at IS NOT NULL AND revoked_at < now() - interval '7 days')`,
-  );
-}
+/*
+ * Session pruning deliberately lives in `src/worker/maintenance.ts`, not here.
+ * This module carries `import 'server-only'`, which throws outside Next's runtime —
+ * so anything the standalone worker needs cannot live behind that guard.
+ */
