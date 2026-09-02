@@ -20,14 +20,9 @@ echo "Applying migrations..."
 npx tsx src/db/migrate.ts
 
 echo "Running authorization assertions..."
-# A dedicated schema-reset keeps the suite independent of whatever is already there.
-psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -q <<'SQL'
-TRUNCATE audit_logs, photo_acl, photo_tags, album_photos, photo_derivatives,
-         processing_jobs, download_grants, photos, group_members, groups,
-         albums, tags, events, upload_batches, invites, sessions, users, batches
-  RESTART IDENTITY CASCADE;
-SQL
-
+# The suite clears and repopulates the archive inside a transaction it always rolls
+# back, so it leaves the database exactly as it found it and can run alongside the
+# end-to-end suite in any order.
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -q -f tests/authorization.sql
 
 echo

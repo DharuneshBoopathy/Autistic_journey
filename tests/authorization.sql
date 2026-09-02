@@ -2,6 +2,24 @@
 \pset pager off
 \set QUIET on
 
+/*
+ * Everything below runs inside a transaction that is ALWAYS rolled back.
+ *
+ * This suite needs a known-empty archive, but it shares a database with the
+ * end-to-end suite, whose seeded accounts it would otherwise destroy — running the
+ * two in either order used to break the second. Rolling back makes this suite
+ * side-effect free: it can run before, after, or between anything else.
+ *
+ * ON_ERROR_STOP plus RAISE EXCEPTION in expect() means a failing assertion aborts
+ * the transaction, so a failure cleans up just as thoroughly as a pass.
+ */
+BEGIN;
+
+TRUNCATE audit_logs, photo_acl, photo_tags, album_photos, photo_derivatives,
+         processing_jobs, download_grants, photos, group_members, groups,
+         albums, tags, events, upload_batches, invites, sessions, users, batches
+  RESTART IDENTITY CASCADE;
+
 -- ---------------------------------------------------------------- fixtures ---
 INSERT INTO batches (id, name, start_year, end_year) VALUES
   ('11111111-1111-1111-1111-111111111111', 'CSE 2021-2025', 2021, 2025),
@@ -117,6 +135,28 @@ SELECT expect('dave sees 1 of 6',    (SELECT visible_as('dddddddd-0000-0000-0000
 SELECT expect('alice sees 4 of 6',   (SELECT visible_as('aaaaaaaa-0000-0000-0000-000000000001','11111111-1111-1111-1111-111111111111') IS NOT NULL)::text || (SELECT count(*)::text FROM visible_photos), 'true4');
 
 \echo ''
+\echo '=== A deleted group stops granting access ==='
+-- Regression: the predicate once joined photo_acl straight to group_members without
+-- looking at the groups row, so soft-deleting a group left every grant live while
+-- the group vanished from the interface.
+UPDATE groups SET deleted_at = now()
+ WHERE id = '67676767-0000-0000-0000-000000000001';
+
+SELECT expect('bob after group deleted',
+  visible_as('bbbbbbbb-0000-0000-0000-000000000002','11111111-1111-1111-1111-111111111111'),
+  'P_batch');
+SELECT expect('alice keeps her own photo',
+  visible_as('aaaaaaaa-0000-0000-0000-000000000001','11111111-1111-1111-1111-111111111111'),
+  'P_batch,P_group,P_private,P_selected');
+
+UPDATE groups SET deleted_at = NULL
+ WHERE id = '67676767-0000-0000-0000-000000000001';
+
+SELECT expect('bob regains access when restored',
+  visible_as('bbbbbbbb-0000-0000-0000-000000000002','11111111-1111-1111-1111-111111111111'),
+  'P_batch,P_group');
+
+\echo ''
 \echo '=== Audit log is append-only ==='
 INSERT INTO audit_logs (action) VALUES ('test.event');
 DO $$
@@ -140,3 +180,5 @@ END $$;
 \echo ''
 \echo 'All authorization assertions passed.'
 \echo ''
+
+ROLLBACK;
