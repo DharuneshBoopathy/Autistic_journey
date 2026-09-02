@@ -1,0 +1,79 @@
+name: CI
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+
+# The reference portfolio had no CI at all. Everything below is new.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  static:
+    name: Lint, typecheck, build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm run build
+        env:
+          # Build-time placeholders. These are not credentials and grant nothing —
+          # they exist only so the env schema validates during compilation.
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/placeholder
+          SESSION_SECRET: ci-build-placeholder-not-a-secret-000000
+
+  authorization:
+    name: Authorization suite
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: autistic_journey_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports: ['5432:5432']
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/autistic_journey_test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Install psql
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      # This is the job that must never be allowed to fail silently: it proves no
+      # read path can see a photo its viewer is not entitled to.
+      - name: Run authorization assertions
+        run: ./scripts/test-authz.sh
+      - name: Run unit tests
+        run: npm test
+
+  audit:
+    name: Dependency audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      # Fails the build on high/critical advisories. Moderate findings are reported
+      # but do not block, because the only current one is a dev-time transitive
+      # dependency of the migration CLI (see SECURITY.md).
+      - run: npm audit --audit-level=high

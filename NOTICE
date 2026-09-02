@@ -1,0 +1,42 @@
+The Autistic Journey / Gallery
+==============================
+
+This project's visual language derives from the open-source portfolio
+
+    ITom Dev — Interactive 3D WebGL Portfolio
+    https://github.com/ITomPoland/portfolio-itom
+    Copyright (c) 2026 Tomasz Szmajda
+    Licensed under the MIT License
+
+What is derived from it
+-----------------------
+
+Presentation only: the ink-on-paper colour system, the type and spacing rhythm,
+the three motion curves, the "sketch" border-radius idiom, and the general shape
+of several DOM/CSS patterns (torn-paper cards, the hand-drawn scrollbar, the
+paper-tear loading transition, the sr-only/skip-link accessibility layer).
+
+These are reimplemented here for a different application; no file is copied
+verbatim. The MIT licence text is reproduced in LICENSE-portfolio-itom.
+
+What is NOT used
+----------------
+
+The upstream README states:
+
+    "All personal assets, 3D textures, images, and copywriting are copyright of
+     Tomasz Szmajda and may not be reused or reproduced without explicit
+     permission."
+
+Accordingly this project contains none of the upstream project's images,
+textures, audio, fonts-as-shipped, favicon, Open Graph artwork, or copywriting,
+and none of its branding. Any paper or texture imagery used here is either
+generated procedurally or independently sourced.
+
+Fonts
+-----
+
+Where the display face "Cabin Sketch" is used it is obtained directly from
+Google Fonts under the SIL Open Font License 1.1, and the OFL text is shipped
+alongside the font files as that licence requires. It is referenced with a
+system-font fallback so the interface is fully usable without it.

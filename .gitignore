@@ -1,0 +1,43 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Next.js
+/.next/
+/out/
+next-env.d.ts
+
+# Production
+/build
+/dist
+
+# Environment — NEVER commit real secrets.
+.env
+.env.*
+!.env.example
+
+# Local storage adapter data (dev only — never commit photos)
+/var/
+/storage/
+/uploads/
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Testing
+/coverage
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+
+# Misc
+.vercel
+*.tsbuildinfo

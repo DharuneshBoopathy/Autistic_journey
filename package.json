@@ -1,0 +1,44 @@
+{
+  "name": "autistic-journey-gallery",
+  "version": "0.1.0",
+  "private": true,
+  "description": "The Autistic Journey / Gallery — a private, batch-only college photo archive.",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "tsx src/db/migrate.ts",
+    "db:seed": "tsx src/db/seed.ts",
+    "db:studio": "drizzle-kit studio",
+    "worker": "tsx src/worker/index.ts"
+  },
+  "dependencies": {
+    "@node-rs/argon2": "^2.2.0",
+    "drizzle-orm": "^0.45.2",
+    "next": "^16.3.4",
+    "postgres": "^3.4.9",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "sharp": "^0.35.4",
+    "zod": "^4.5.4"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.5",
+    "@types/react": "^19.2.2",
+    "@types/react-dom": "^19.2.2",
+    "drizzle-kit": "^0.31.10",
+    "eslint": "^9.39.5",
+    "eslint-config-next": "^16.3.4",
+    "tsx": "^4.23.13",
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.11"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
