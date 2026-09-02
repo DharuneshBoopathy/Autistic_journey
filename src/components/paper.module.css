@@ -1,0 +1,200 @@
+/*
+ * The paper design language, reimplemented.
+ *
+ * The reference portfolio achieved its torn-paper look with a `clip-path` polygon of
+ * ~90 jittered vertices plus a bitmap paper texture. The texture is not licensed for
+ * reuse, so the substrate here is generated: a layered SVG fractal-noise data URI,
+ * which also happens to be a few hundred bytes rather than 22 KB.
+ */
+
+.card {
+  position: relative;
+  background: var(--surface);
+  border: 2px solid var(--ink);
+  border-radius: var(--radius-sketch);
+  padding: var(--space-8);
+  box-shadow: var(--shadow-sticker);
+}
+
+/* Faint fibrous grain, so the surface reads as paper rather than as a flat box. */
+.card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  opacity: 0.35;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)' opacity='0.5'/%3E%3C/svg%3E");
+  mix-blend-mode: multiply;
+}
+
+.card > * {
+  position: relative;
+}
+
+.title {
+  font-size: var(--text-xl);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wider);
+  margin-bottom: var(--space-2);
+}
+
+.subtitle {
+  color: var(--ink-50);
+  font-size: var(--text-sm);
+  margin-bottom: var(--space-6);
+}
+
+/* --- Fields ---------------------------------------------------------------- */
+
+.field {
+  display: block;
+  margin-bottom: var(--space-4);
+}
+
+.label {
+  display: block;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  letter-spacing: var(--tracking-wide);
+  margin-bottom: var(--space-1);
+}
+
+.hint {
+  display: block;
+  font-size: var(--text-xs);
+  color: var(--ink-40);
+  margin-top: var(--space-1);
+}
+
+.input {
+  width: 100%;
+  padding: var(--space-3);
+  background: var(--paper);
+  border: 2px solid var(--ink);
+  border-radius: var(--radius-sm);
+  transition: box-shadow var(--dur-fast) var(--ease-panel);
+}
+
+.input:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-sticker);
+}
+
+/* Invite codes are transcribed by hand; monospace and open tracking make
+   mis-typing far less likely. */
+.code {
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+}
+
+/* --- Buttons --------------------------------------------------------------- */
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  width: 100%;
+  padding: var(--space-3) var(--space-6);
+  background: var(--ink);
+  color: var(--surface);
+  border: 2px solid var(--ink);
+  border-radius: var(--radius-sm);
+  font-weight: 600;
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  font-size: var(--text-sm);
+  transition:
+    transform var(--dur-fast) var(--ease-spring),
+    box-shadow var(--dur-fast) var(--ease-spring);
+}
+
+.button:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-sticker);
+}
+
+.button:active:not(:disabled) {
+  transform: translateY(1px);
+  box-shadow: none;
+}
+
+.button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.buttonSecondary {
+  background: transparent;
+  color: var(--ink);
+}
+
+/* --- Messages -------------------------------------------------------------- */
+
+.error,
+.notice {
+  padding: var(--space-3);
+  border: 2px solid;
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
+  margin-bottom: var(--space-4);
+}
+
+.error {
+  border-color: var(--danger);
+  color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 6%, transparent);
+}
+
+.notice {
+  border-color: var(--success);
+  color: var(--success);
+  background: color-mix(in srgb, var(--success) 6%, transparent);
+}
+
+/* --- Auth page shell ------------------------------------------------------- */
+
+.authShell {
+  display: grid;
+  place-items: center;
+  min-height: 100dvh;
+  padding: var(--space-6);
+}
+
+.authInner {
+  width: 100%;
+  max-width: 26rem;
+}
+
+.brand {
+  text-align: center;
+  margin-bottom: var(--space-8);
+}
+
+.brandName {
+  font-size: var(--text-2xl);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wider);
+  line-height: 1.1;
+}
+
+.brandTag {
+  color: var(--ink-40);
+  font-size: var(--text-sm);
+  margin-top: var(--space-1);
+}
+
+.footNote {
+  text-align: center;
+  font-size: var(--text-sm);
+  color: var(--ink-50);
+  margin-top: var(--space-6);
+}
+
+.footNote a {
+  color: var(--ink);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 3px;
+}

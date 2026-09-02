@@ -8,6 +8,13 @@
       "when": 1788337712687,
       "tag": "0000_initial_schema",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1788338807795,
+      "tag": "0002_audit_log_independence",
+      "breakpoints": true
     }
   ]
 }

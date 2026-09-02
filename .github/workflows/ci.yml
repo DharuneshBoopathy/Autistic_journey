@@ -62,6 +62,18 @@ jobs:
         run: ./scripts/test-authz.sh
       - name: Run unit tests
         run: npm test
+      - name: Install browsers
+        run: npx playwright install --with-deps chromium
+      - name: Bootstrap an administrator for the end-to-end suite
+        run: npm run db:seed -- --batch "CI Batch" --start 2021 --end 2025 --email admin@example.com --name "Archive Admin"
+        env:
+          # Test-only credential for an ephemeral CI database. Not a secret.
+          ADMIN_PASSWORD: correct-horse-battery-staple
+      - name: Run end-to-end suite
+        run: npm run test:e2e
+        env:
+          APP_ORIGIN: http://localhost:3100
+          SESSION_SECRET: ci-e2e-placeholder-not-a-secret-00000000
 
   audit:
     name: Dependency audit

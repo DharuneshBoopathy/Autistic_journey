@@ -2,7 +2,7 @@
   "name": "autistic-journey-gallery",
   "version": "0.1.0",
   "private": true,
-  "description": "The Autistic Journey / Gallery — a private, batch-only college photo archive.",
+  "description": "The Autistic Journey / Gallery \u2014 a private, batch-only college photo archive.",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -15,7 +15,9 @@
     "db:migrate": "tsx src/db/migrate.ts",
     "db:seed": "tsx src/db/seed.ts",
     "db:studio": "drizzle-kit studio",
-    "worker": "tsx src/worker/index.ts"
+    "worker": "tsx src/worker/index.ts",
+    "test:e2e": "playwright test",
+    "test:authz": "./scripts/test-authz.sh"
   },
   "dependencies": {
     "@node-rs/argon2": "^2.2.0",
@@ -24,10 +26,12 @@
     "postgres": "^3.4.9",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
+    "server-only": "^0.0.1",
     "sharp": "^0.35.4",
     "zod": "^4.5.4"
   },
   "devDependencies": {
+    "@playwright/test": "^1.62.1",
     "@types/node": "^22.10.5",
     "@types/react": "^19.2.2",
     "@types/react-dom": "^19.2.2",

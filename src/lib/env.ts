@@ -66,7 +66,20 @@ function load() {
     }
   }
 
-  if (env.NODE_ENV === 'production') {
+  /*
+   * Deployment-shape checks.
+   *
+   * Skipped during `next build`, which sets NODE_ENV=production while merely
+   * compiling: a build machine legitimately has no storage credentials and no HTTPS
+   * origin, and failing there would only force placeholder secrets into CI.
+   *
+   * These still run when the server actually starts, which is the moment that
+   * matters — a misconfigured deployment refuses to boot rather than quietly
+   * serving private photos from a non-durable disk over plain HTTP.
+   */
+  const isBuilding = process.env.NEXT_PHASE === 'phase-production-build';
+
+  if (env.NODE_ENV === 'production' && !isBuilding) {
     if (env.STORAGE_DERIVATIVES_DRIVER === 'local' || env.STORAGE_ORIGINALS_DRIVER === 'local') {
       throw new Error('The "local" storage driver is for development only; it is not durable.');
     }

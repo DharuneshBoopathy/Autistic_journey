@@ -81,6 +81,29 @@ Stated plainly, because the brief forbids fake security claims:
   on ingest, but captions and tags are user-supplied and visible to everyone
   permitted to see the photo.
 
+## Server Actions are public endpoints
+
+Every export of a `'use server'` module is compiled into a callable RPC endpoint
+with a stable id, reachable by anyone who can reach the app. An exported helper
+is therefore a public HTTP entry point, whatever its name suggests.
+
+This bit us during development: `src/app/(auth)/actions.ts` re-exported
+`revokeAllSessions(userId)` for convenience, which published "terminate every
+session belonging to any user id you name" — with no session check of its own.
+It was caught by the end-to-end suite, which noticed logout had silently broken.
+
+The rules, now enforced by `src/lib/server-actions.test.ts`:
+
+- Every export of a `'use server'` file must be an `async function` declared in
+  that same file. No re-exports, no exported constants, no default export.
+- An action must establish the caller's identity itself via `getSessionUser()`.
+  It must never accept a user id as an argument — that is the caller naming whose
+  account to act on, which is broken access control by construction.
+- Server-side helpers live in `src/lib/` and are imported from there.
+
+The guard is verified against the original bug: re-introducing the re-export
+fails the suite.
+
 ## Known accepted findings
 
 `npm audit` reports 4 moderate advisories, all one transitive dependency

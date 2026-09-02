@@ -457,7 +457,18 @@ export const auditLogs = pgTable(
   'audit_logs',
   {
     id: bigserial('id', { mode: 'number' }).primaryKey(),
-    actorId: uuid('actor_id').references(() => users.id, { onDelete: 'set null' }),
+
+    /*
+     * Deliberately NOT a foreign key.
+     *
+     * With `ON DELETE SET NULL`, removing a user made Postgres try to rewrite that
+     * user's audit rows, which the append-only trigger refused — so no account with
+     * any recorded activity could be deleted at all. An audit row is a historical
+     * fact, not a view over current state, so it must outlive the account it
+     * describes. `metadata.actor` carries a captured identity for rows whose user is
+     * later purged. See drizzle/0002_audit_log_independence.sql.
+     */
+    actorId: uuid('actor_id'),
     action: text('action').notNull(),
     targetType: text('target_type'),
     targetId: text('target_id'),
