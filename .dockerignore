@@ -1,0 +1,21 @@
+# Build inputs only. Everything here either does not belong in an image or is
+# rebuilt inside it.
+.git
+.github
+node_modules
+.next
+dist
+var
+test-results
+playwright-report
+blob-report
+coverage
+e2e
+tests
+*.log
+.env
+.env.*
+!.env.example
+README.md
+SECURITY.md
+docs

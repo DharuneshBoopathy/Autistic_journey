@@ -3,7 +3,8 @@ import nextTypescript from 'eslint-config-next/typescript';
 
 const config = [
   {
-    ignores: ['.next/**', 'node_modules/**', 'drizzle/**', 'var/**', 'next-env.d.ts'],
+    // `dist/**` is bundler output (npm run build:worker), not source.
+    ignores: ['.next/**', 'dist/**', 'node_modules/**', 'drizzle/**', 'var/**', 'next-env.d.ts'],
   },
   ...coreWebVitals,
   ...nextTypescript,

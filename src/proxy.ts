@@ -20,7 +20,11 @@ import { NextResponse, type NextRequest } from 'next/server';
  * no security.
  */
 
-const PUBLIC_PATHS = ['/login', '/register'];
+/*
+ * `/api/health` is public because a load balancer has no session. It is written to
+ * disclose nothing beyond up-or-down for exactly that reason — see the route.
+ */
+const PUBLIC_PATHS = ['/login', '/register', '/api/health'];
 
 // `__Host-` in production, plain name over http in local development.
 const SESSION_COOKIES = ['__Host-aj_session', 'aj_session'];

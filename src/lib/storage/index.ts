@@ -27,7 +27,22 @@ export { GDriveStorage } from './gdrive';
 function build(driver: 'local' | 'r2' | 'gdrive'): StorageAdapter {
   switch (driver) {
     case 'local':
-      return new LocalStorage(path.resolve(process.cwd(), env.STORAGE_LOCAL_PATH));
+      /*
+       * The `turbopackIgnore` comment matters more than it looks.
+       *
+       * A `path.resolve` the bundler cannot evaluate makes its file tracer assume
+       * the whole project might be read at runtime, so `output: 'standalone'`
+       * copied the entire repository — src, tests, scripts, e2e — into the
+       * deployment bundle. This tells it the path is resolved at runtime and not a
+       * module to follow.
+       *
+       * Nothing is weakened by it: the local driver is refused in production by
+       * `env.ts`, and storage keys are still generated server-side, so this path is
+       * never joined with anything a user supplied.
+       */
+      return new LocalStorage(
+        path.resolve(/* turbopackIgnore: true */ process.cwd(), env.STORAGE_LOCAL_PATH),
+      );
 
     case 'r2':
       return new R2Storage({

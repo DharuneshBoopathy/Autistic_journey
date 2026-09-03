@@ -47,3 +47,6 @@ Thumbs.db
 /playwright-report/
 /blob-report/
 /playwright/.cache/
+
+# Bundled Node entry points (npm run build:worker)
+/dist/

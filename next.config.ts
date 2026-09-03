@@ -5,7 +5,7 @@ import type { NextConfig } from 'next';
  *
  * Content-Security-Policy is deliberately NOT here — it needs a fresh nonce per
  * request so that Next's inline hydration scripts are allowed to run, and static
- * headers cannot provide one. See `src/middleware.ts`.
+ * headers cannot provide one. See `src/proxy.ts`.
  *
  * Note also the deliberate inversion of the reference portfolio's caching rule: it
  * cached `*.webp` for a year in a shared cache. Private photos must never enter a
@@ -25,6 +25,27 @@ const securityHeaders = [
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+
+  /*
+   * Emit a self-contained server under `.next/standalone`, with only the modules
+   * the app actually reaches traced into it.
+   *
+   * This is what lets the deployment image be Node plus that directory rather than
+   * the whole repository and its dev dependencies — a smaller image, and one with
+   * no compiler, test runner or migration tooling sitting next to the archive at
+   * runtime.
+   */
+  output: 'standalone',
+
+  /*
+   * Tests are not deployment artefacts. The tracer pulls in a directory's siblings
+   * when it follows a module from it, which is how `storage.test.ts` ended up in
+   * the bundle — harmless, but a test file in the runtime image is a small lie
+   * about what is running.
+   */
+  outputFileTracingExcludes: {
+    '*': ['**/*.test.ts', '**/*.test.tsx', 'e2e/**', 'tests/**'],
+  },
 
   // Never leak the framework version.
   poweredByHeader: false,

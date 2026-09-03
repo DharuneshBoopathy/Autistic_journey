@@ -142,6 +142,13 @@ npm run dev       # terminal 1
 npm run worker    # terminal 2
 ```
 
+### Deploying
+
+`docs/OPERATIONS.md` has the runbook. In short: `docker compose run --rm migrate`,
+seed the first administrator, `docker compose up -d`, and put TLS in front of it —
+session cookies use the `__Host-` prefix and the app refuses to start on plain
+http in production.
+
 ### Backups
 
 `docs/OPERATIONS.md` is the runbook. In short: the database and the originals are
