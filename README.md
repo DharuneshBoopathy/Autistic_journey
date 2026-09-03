@@ -144,8 +144,10 @@ npm run worker    # terminal 2
 
 ### Deploying
 
-`docs/OPERATIONS.md` has the runbook — Railway for a managed deploy, or
-`docker compose` on a box you own. Put TLS in front of it either way: session
+`docs/OPERATIONS.md` has the runbook. It can run for **$0 a month** on a free
+Oracle Cloud Always Free machine — app, worker, Postgres, 200 GB of photographs
+and automatic TLS, all from the compose file — or on Railway for about $5 if you
+would rather not administer a server. Put TLS in front of it either way: session
 cookies use the `__Host-` prefix and the app refuses to start on plain http in
 production.
 

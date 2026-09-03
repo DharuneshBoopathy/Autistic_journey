@@ -18,6 +18,26 @@ const schema = z.object({
   STORAGE_ORIGINALS_DRIVER: z.enum(['local', 'r2', 'gdrive']).default('local'),
   STORAGE_LOCAL_PATH: z.string().default('./var/storage'),
 
+  /**
+   * Permit the `local` driver in production. Off by default, and it must stay a
+   * deliberate act.
+   *
+   * The refusal exists because "local" usually means a container's ephemeral
+   * filesystem, where the archive is one redeploy away from gone. But on a virtual
+   * machine with a persistent block volume it is a legitimate — and free — place
+   * to keep photographs, which is the difference between this project costing five
+   * dollars a month and costing nothing.
+   *
+   * Setting this asserts two things about that disk: it survives the process, and
+   * something copies it off the machine. `scripts/backup-db.sh` and
+   * `npm run backup:originals` are that something; a disk with no second copy is a
+   * single point of total loss whatever the driver is called.
+   */
+  STORAGE_ALLOW_LOCAL_IN_PRODUCTION: z
+    .enum(['true', 'false'])
+    .default('false')
+    .transform((v) => v === 'true'),
+
   R2_ACCOUNT_ID: z.string().optional(),
   R2_ACCESS_KEY_ID: z.string().optional(),
   R2_SECRET_ACCESS_KEY: z.string().optional(),
@@ -91,8 +111,24 @@ function load() {
   const isBuilding = process.env.NEXT_PHASE === 'phase-production-build';
 
   if (env.NODE_ENV === 'production' && !isBuilding) {
-    if (env.STORAGE_DERIVATIVES_DRIVER === 'local' || env.STORAGE_ORIGINALS_DRIVER === 'local') {
-      throw new Error('The "local" storage driver is for development only; it is not durable.');
+    const usesLocal =
+      env.STORAGE_DERIVATIVES_DRIVER === 'local' || env.STORAGE_ORIGINALS_DRIVER === 'local';
+
+    if (usesLocal && !env.STORAGE_ALLOW_LOCAL_IN_PRODUCTION) {
+      throw new Error(
+        'The "local" storage driver is not durable on ephemeral hosting, where a redeploy ' +
+          'takes the archive with it.\n' +
+          'On a machine with a persistent disk it is a reasonable — and free — choice: set ' +
+          'STORAGE_ALLOW_LOCAL_IN_PRODUCTION=true to say that is what this is, and make sure ' +
+          'something copies STORAGE_LOCAL_PATH off the machine (see docs/OPERATIONS.md).',
+      );
+    }
+
+    if (usesLocal) {
+      console.warn(
+        `[storage] Photographs are being kept on this machine at ${env.STORAGE_LOCAL_PATH}. ` +
+          'Nothing else has a copy unless you have scheduled the backups.',
+      );
     }
     if (!env.APP_ORIGIN.startsWith('https://')) {
       throw new Error('APP_ORIGIN must be https:// in production — session cookies are Secure-only.');

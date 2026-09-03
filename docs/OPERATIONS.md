@@ -197,6 +197,77 @@ that page and nothing else. Configuration is validated at startup by
 and answering every request with a 500 — which is what a rolling deploy needs in
 order to stop and keep the previous version.
 
+### Running it for nothing
+
+Every path below costs $0 a month. All of them still want a card on file at signup
+for identity, which is unavoidable — the distinction worth caring about is whether
+the provider *can* bill you. On Oracle's Always Free tier it cannot: the resources
+are hard-capped and you have to deliberately upgrade the account before any charge
+becomes possible. A free object-storage tier, by contrast, bills you the moment you
+exceed it.
+
+**A free virtual machine, running the compose file.**
+
+| | |
+|---|---|
+| Machine | Oracle Cloud **Always Free** — up to 4 ARM cores and 24 GB RAM, or Google Cloud's `e2-micro`, which is smaller but simpler to get |
+| Database | Postgres in the compose file, on the same machine |
+| Photos | the machine's disk — Oracle Always Free includes 200 GB of block storage, twenty times R2's free tier |
+| TLS | Caddy, in the compose file, with a free Let's Encrypt certificate |
+| Domain | yours |
+
+That is the whole system on one machine that nobody charges you for, and it needs
+no Cloudflare account at all.
+
+```bash
+# On the machine, once:
+git clone <this repo> archive && cd archive
+cp .env.example .env      # then edit it
+
+docker compose run --rm migrate
+ADMIN_PASSWORD='…' docker compose run --rm -e ADMIN_PASSWORD seed \
+  --batch "CSE 2021-2025" --start 2021 --end 2025 \
+  --email you@example.com --name "Your Name"
+docker compose up -d
+```
+
+The `.env` needs, at minimum:
+
+```
+POSTGRES_PASSWORD=<long random string>
+SESSION_SECRET=<node -e "console.log(require('crypto').randomBytes(32).toString('base64'))">
+APP_ORIGIN=https://archive.yourdomain.com
+ARCHIVE_DOMAIN=archive.yourdomain.com
+ARCHIVE_ACME_EMAIL=you@yourdomain.com
+STORAGE_ALLOW_LOCAL_IN_PRODUCTION=true
+STORAGE_SOFT_QUOTA_BYTES=161061273600   # 150 GB, if the volume is 200 GB
+```
+
+Point `ARCHIVE_DOMAIN` at the machine's public address **before** starting, and
+open ports 80 and 443 in the provider's firewall as well as the machine's own —
+Oracle's images ship with iptables closed, which is the single most common reason
+a first deployment appears to hang. Let's Encrypt has to reach port 80 to issue the
+certificate.
+
+`STORAGE_ALLOW_LOCAL_IN_PRODUCTION=true` is a deliberate assertion, not a
+formality. It says the disk survives the process *and* something copies it off the
+machine. The backups above are that something — schedule them the same day you
+deploy, not later. A free machine is exactly the kind that gets reclaimed, and 200
+GB of photographs with no second copy is a single point of total loss.
+
+**What the free tier actually costs you.** Oracle reclaims Always Free compute from
+accounts that sit idle, so an archive nobody visits for weeks can be reaped; keep
+the backups running off-machine and that becomes an inconvenience rather than a
+disaster. You also administer a server: security updates, disk, the occasional
+reboot. That is the real price, and it is paid in attention rather than money.
+
+**The other free shape**, if you would rather not run a machine: a free PaaS web
+service plus Neon's free Postgres plus R2's free 10 GB. It does not work as well —
+free web tiers sleep after fifteen minutes and take the better part of a minute to
+wake, and none of them run a second always-on process, so the worker has nowhere to
+live and uploaded photos never gain the thumbnails that make them visible. Free
+hosting can serve this app or process its uploads, not both.
+
 ### Railway, specifically
 
 Both services build from the same `Dockerfile` in this repository; `railway.json`

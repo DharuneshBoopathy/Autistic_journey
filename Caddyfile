@@ -1,0 +1,41 @@
+# Automatic HTTPS, from a certificate authority that charges nothing.
+#
+# The archive needs TLS to work at all, not merely to be tidy: session cookies use
+# the `__Host-` prefix, which browsers refuse to accept over plain http, and the app
+# will not start with a non-https APP_ORIGIN in production.
+#
+# Caddy obtains and renews a Let's Encrypt certificate on its own. The only thing
+# required of you is that ARCHIVE_DOMAIN resolves to this machine before it starts —
+# the certificate authority checks that, and there is no way around it.
+#
+# Set ARCHIVE_DOMAIN and ARCHIVE_ACME_EMAIL in .env.
+
+{
+	email {$ARCHIVE_ACME_EMAIL}
+}
+
+{$ARCHIVE_DOMAIN} {
+	# The app sets its own Content-Security-Policy per request, with a nonce, and its
+	# own security headers. Nothing is added or rewritten here — a proxy quietly
+	# replacing a header the application carefully computed is a good way to break
+	# hydration and spend a day finding out why.
+	reverse_proxy web:3000
+
+	# 50 MB matches MAX_UPLOAD_BYTES. Without this Caddy would happily stream a
+	# multi-gigabyte body to the app before anything got to reject it.
+	request_body {
+		max_size 52428800
+	}
+
+	encode zstd gzip
+
+	log {
+		# Paths only. Query strings can carry a search someone typed, and the point of
+		# this archive is that what people look at is nobody else's business.
+		format filter {
+			request>uri query {
+				delete q
+			}
+		}
+	}
+}

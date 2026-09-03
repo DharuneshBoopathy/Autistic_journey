@@ -10,13 +10,35 @@
 #       --email you@example.com --name "Your Name"
 #   docker compose up -d
 #
-# This does NOT terminate TLS. Session cookies use the `__Host-` prefix, which
-# browsers only accept over HTTPS, so put a reverse proxy in front of it and set
-# APP_ORIGIN to the https:// address.
+# TLS is handled by the `caddy` service, which obtains a free Let's Encrypt
+# certificate automatically. Point ARCHIVE_DOMAIN at this machine's public address
+# before starting it, and set APP_ORIGIN to the same https:// address — session
+# cookies use the `__Host-` prefix, which browsers refuse over plain http.
 
 name: autistic-journey
 
 services:
+  # Free, automatic HTTPS. See Caddyfile.
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - '80:80'
+      - '443:443'
+      - '443:443/udp'
+    environment:
+      ARCHIVE_DOMAIN: ${ARCHIVE_DOMAIN:?set ARCHIVE_DOMAIN in .env}
+      ARCHIVE_ACME_EMAIL: ${ARCHIVE_ACME_EMAIL:?set ARCHIVE_ACME_EMAIL in .env}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      # Certificates live here. Losing this volume means re-issuing them, and
+      # Let's Encrypt rate-limits that, so it is a named volume rather than a
+      # container's scratch space.
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      - web
+
   db:
     image: postgres:16-bookworm
     restart: unless-stopped
@@ -41,8 +63,10 @@ services:
     env_file: .env
     environment:
       DATABASE_URL: postgres://${POSTGRES_USER:-archive}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-autistic_journey}
-    ports:
-      - '127.0.0.1:3000:3000'
+    # Not published to the host: caddy is the only thing that should reach it, and
+    # binding 3000 publicly would be an unencrypted way in past the certificate.
+    expose:
+      - '3000'
     depends_on:
       db:
         condition: service_healthy
@@ -91,3 +115,5 @@ services:
 volumes:
   db-data:
   storage:
+  caddy-data:
+  caddy-config:
