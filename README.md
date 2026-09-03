@@ -144,10 +144,14 @@ npm run worker    # terminal 2
 
 ### Deploying
 
-`docs/OPERATIONS.md` has the runbook. It can run for **$0 a month** on a free
-Oracle Cloud Always Free machine — app, worker, Postgres, 200 GB of photographs
-and automatic TLS, all from the compose file — or on Railway for about $5 if you
-would rather not administer a server. Put TLS in front of it either way: session
+`docs/OPERATIONS.md` has the runbook: a free service on Northflank, a free
+Oracle Cloud machine running the compose file, or Railway for about $5 if you
+would rather not administer a server.
+
+Where the host will not run a second always-on process — which is most free
+hosting — `WORKER_IN_PROCESS=true` runs the derivative worker inside the web
+server. Without a worker an upload never gains its thumbnail, so the archive
+appears to accept photographs and then lose them. Put TLS in front of it either way: session
 cookies use the `__Host-` prefix and the app refuses to start on plain http in
 production.
 

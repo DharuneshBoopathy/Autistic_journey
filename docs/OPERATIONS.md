@@ -293,6 +293,60 @@ LOCKED`, so no two workers ever take the same photo.
 The separate process remains the default and the better shape. Use this where the
 alternative is no worker at all.
 
+### Northflank, specifically
+
+Northflank builds from the `Dockerfile` in this repository. Unlike Railway it has
+no configuration file in the repo — everything below is set in its dashboard, which
+is why there is no `northflank.json` here rather than an invented one.
+
+Verify the free plan's current contents before relying on them. What this needs is
+one always-on service and one Postgres; the plan has been reported as covering
+that, but tiers move and the report is not the same as the terms.
+
+1. **Create a service** → *Combined service* (it builds and runs from one place) →
+   your GitHub repository and branch.
+2. **Build**: choose **Dockerfile**, path `/Dockerfile`, context `/`.
+3. **Networking**: port **3000**, protocol HTTP, public.
+4. **Health check**: HTTP, path `/api/health`. It reports up-or-down only, which is
+   all a health check should ever disclose.
+5. **Add a Postgres addon** to the project. Northflank injects its connection
+   string; link it to the service rather than copying the URL by hand, so a rotated
+   credential does not silently leave the app pointing at nothing.
+6. **Variables**: generate them on your own machine —
+
+   ```bash
+   ./scripts/deploy-env.sh archive.yourdomain.com --single-service
+   ```
+
+   `--single-service` sets `WORKER_IN_PROCESS=true`, which is what makes one
+   service enough. The script prints a fresh `SESSION_SECRET` once; paste it into
+   Northflank and close the terminal. Do not put it in a chat window, a ticket or a
+   commit.
+
+   If the plan does allow a second service, prefer that: create it from the same
+   repository with the start command `node dist/worker/index.mjs`, no port, no
+   health check, and leave `WORKER_IN_PROCESS` off. Two processes is the better
+   shape wherever it is available.
+7. **Custom domain**: add it in Northflank, point the CNAME at the address it
+   gives you, and set `APP_ORIGIN` to `https://` plus that domain. The certificate
+   is issued automatically. The app refuses to start on plain http, so this is not
+   an optional last step.
+8. **Migrate and seed**, once, from a shell on the running service:
+
+   ```bash
+   node dist/db/migrate.mjs
+   ADMIN_PASSWORD='…' node dist/db/seed.mjs \
+     --batch "CSE 2021-2025" --start 2021 --end 2025 \
+     --email you@example.com --name "Your Name"
+   ```
+
+**Before you put real photographs in it.** Storage is still unsettled. A container
+filesystem does not survive a redeploy, so with `STORAGE_*_DRIVER=local` and no
+persistent volume attached, every photo uploaded is lost the next time the service
+rebuilds — and it will look like it worked right up until it doesn't. Either attach
+a volume and set `STORAGE_ALLOW_LOCAL_IN_PRODUCTION=true`, or point storage at R2.
+Until one of those is done, treat the deployment as a rehearsal.
+
 ### Railway, specifically
 
 Both services build from the same `Dockerfile` in this repository; `railway.json`
