@@ -328,9 +328,32 @@ Two hard blocks, not preferences:
   it from Vercel Cron instead caps out at once per day on the Hobby plan, so a
   photo uploaded on Monday would appear on Tuesday.
 
-Render works but costs more for the same shape: the web service, the worker and
-the database are three paid instances, and Render's free tiers either sleep or
-expire.
+### Why not Render
+
+Render is a good platform; it is this application's shape that does not fit its
+free tier. Four things, in descending order of how fatal they are:
+
+- **Free Postgres is deleted after 30 days.** The database is not a cache here —
+  it holds every caption, every access-control row and the whole audit log. An
+  archive meant to outlast a degree cannot live on a database that expires monthly.
+  This one alone settles it.
+- **There is no free background worker.** Free instance types cover web services
+  and static sites; workers start at the paid tier. Co-locating the worker inside
+  the web service would work around that, but see the next point.
+- **Free web services sleep after 15 minutes idle** and take the better part of a
+  minute to wake. For a gallery someone opens now and then, nearly every visit is a
+  cold start — and a co-located worker sleeps with it.
+- **No free persistent disk.** Free services have an ephemeral filesystem, so
+  photographs would have to go to object storage, which puts a card back in the
+  loop for something the free virtual machine above holds on its own 200 GB volume.
+
+Paid, Render works fine and is pleasant to use — but it is three paid instances
+for this shape (web, worker, database), which lands around four times Railway for
+the same result.
+
+Tiers and prices move. Check them before taking any of this on trust; the
+structural points — no free worker, no free disk, an expiring free database — have
+held for a long time, and they are the ones that decide it.
 
 ### Scheduling the housekeeping
 
