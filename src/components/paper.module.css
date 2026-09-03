@@ -196,4 +196,8 @@
 .footNote a {
   color: var(--ink);
   font-weight: 550;
+  /* Padding rather than a larger font: the link keeps its place in the sentence
+     while gaining a hit area a thumb can actually land on. */
+  display: inline-block;
+  padding: 0.4rem 0.2rem;
 }

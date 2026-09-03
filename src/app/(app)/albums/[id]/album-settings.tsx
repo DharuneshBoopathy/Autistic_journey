@@ -119,6 +119,7 @@ export function AlbumSettings({
             className={ui.select}
             value={visibility}
             onChange={(event) => setVisibility(event.target.value)}
+            aria-label="Who can open this album"
           >
             <option value="private">Only me</option>
             <option value="batch">Everyone in the batch</option>

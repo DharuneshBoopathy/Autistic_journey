@@ -107,6 +107,7 @@ export function Uploader() {
           className={ui.select}
           value={visibility}
           onChange={(event) => setVisibility(event.target.value)}
+          aria-label="Who can see these"
         >
           <option value="private">{VISIBILITY_LABEL.private}</option>
           <option value="batch">{VISIBILITY_LABEL.batch}</option>

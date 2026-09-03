@@ -37,6 +37,7 @@ deterrents rather than controls.
 | Photo viewer | Full-size preview with a detail panel: caption, visibility, and the group/person picker. What is editable is decided by the server, not by the page. |
 | `/albums` | Albums as covers; an album is a grouping, never a grant, so counts are per-viewer. |
 | `/groups` | Named sets of batch members, used as sharing targets. Membership changes take effect on the next request. |
+| `/events` | Fests, trips, farewells. Anyone can add one; deleting is admin-only, because it detaches every photo filed under it. |
 | `/upload` | Drag-and-drop with a four-at-a-time queue, per-file status and retry-only-failed. |
 | `/trash` | Everything you deleted that is still inside the recovery window, with the days remaining. |
 | `/admin` | Storage headroom, archive and queue counts, the approval queue, members, invites, processing failures, download grants and the audit log. |
@@ -44,6 +45,16 @@ deterrents rather than controls.
 Every one of these reads through the same SQL predicate as the API. There is no
 second copy of the access rule in the browser: hiding a control is presentation,
 and the server refuses the write regardless.
+
+Tagging is the one write open to any member who can *see* a photo rather than only
+its uploader — `tagPhoto` checks the photo against `visible_photos` for itself, so a
+tag cannot be used to probe whether an id names a real photo. Tag suggestions come
+from tags already on photos the viewer can see, never the whole tag table.
+
+Every screen is laid out for a phone as well as a desk: below 860px the navigation
+takes its own row, list rows put their content on a full line with the controls
+beneath, and the timeline's filters collapse behind one control so the photos are
+not pushed off the screen.
 
 ## Architecture
 

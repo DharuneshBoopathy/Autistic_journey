@@ -1,22 +1,17 @@
+import { redirect } from 'next/navigation';
+
 /**
- * Placeholder root. Replaced in the gallery phase by the authenticated timeline;
- * unauthenticated visitors will be redirected to /login by middleware.
+ * The root path has no content of its own.
+ *
+ * There is nothing public to show: `/` is not in the proxy's `PUBLIC_PATHS`, so an
+ * anonymous visitor is redirected to `/login` before this ever renders. Anyone who
+ * gets here is signed in, and the archive's front door is the timeline.
+ *
+ * The redirect is unconditional rather than gated on a session check. That is not
+ * an oversight: `/gallery` calls `requireUser()` for itself, so a visitor who
+ * somehow arrived without one lands on `/login` anyway — and checking here would be
+ * a second copy of a rule that already lives in one place.
  */
 export default function Home() {
-  return (
-    <main id="main" style={{ padding: 'var(--space-12)', maxWidth: '42rem', margin: '0 auto' }}>
-      <h1
-        style={{
-          fontSize: 'var(--text-2xl)',
-          textTransform: 'uppercase',
-          letterSpacing: 'var(--tracking-wider)',
-        }}
-      >
-        The Autistic Journey
-      </h1>
-      <p style={{ color: 'var(--ink-50)', marginTop: 'var(--space-2)' }}>
-        A private archive. Access is limited to approved batch members.
-      </p>
-    </main>
-  );
+  redirect('/gallery');
 }

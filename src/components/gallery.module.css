@@ -36,6 +36,50 @@
 
 /* --- Filters --------------------------------------------------------------- */
 
+/*
+ * The facet panel is always shown on a wide screen; the toggle only exists once
+ * the sidebar has stopped being a column and become a block above the photos.
+ */
+.filterToggle {
+  display: none;
+}
+
+.facets {
+  display: block;
+}
+
+@media (max-width: 900px) {
+  .filterToggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding: 0.55rem 0;
+    background: transparent;
+    border: 0;
+    border-top: 1px solid var(--rule);
+    font-size: var(--text-2xs);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: var(--track-label);
+    color: var(--ink-muted);
+  }
+
+  .filterToggleMark {
+    color: var(--ink-faint);
+    font-weight: 500;
+  }
+
+  .facets {
+    display: none;
+  }
+
+  .facetsOpen {
+    display: block;
+    padding-bottom: var(--s3);
+  }
+}
+
 .searchRow {
   display: flex;
   gap: var(--s2);
@@ -110,6 +154,15 @@
 .facetActive {
   color: var(--ink);
   font-weight: 600;
+}
+
+/* Facet rows are the main navigation on a phone, so they get a thumb-sized row.
+   This has to come after the base rule: a media query adds no specificity. */
+@media (pointer: coarse) {
+  .facetLink {
+    padding-top: 0.4rem;
+    padding-bottom: 0.4rem;
+  }
 }
 
 .facetActive .facetLabel::before {
@@ -498,6 +551,47 @@
   display: flex;
   flex-wrap: wrap;
   gap: var(--s1);
+}
+
+/* --- Tag editor ------------------------------------------------------------ */
+
+/*
+ * A tag is a chip with its own remove control, rather than a comma-separated text
+ * field. Editing a list as text means one stray comma silently renames two tags.
+ */
+.tagChip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s2);
+  padding: 0.1rem 0.2rem 0.1rem 0.45rem;
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--radius);
+  background: var(--paper-sunk);
+  font-size: var(--text-xs);
+  color: var(--ink-body);
+}
+
+.tagRemove {
+  display: grid;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+  border: 0;
+  border-radius: 3px;
+  background: transparent;
+  color: var(--ink-faint);
+  line-height: 1;
+}
+
+.tagRemove:hover:not(:disabled) {
+  background: var(--rule);
+  color: var(--ink);
+}
+
+.tagAdd {
+  display: flex;
+  gap: var(--s2);
+  margin-top: var(--s2);
 }
 
 /* --- Principal picker ------------------------------------------------------ */

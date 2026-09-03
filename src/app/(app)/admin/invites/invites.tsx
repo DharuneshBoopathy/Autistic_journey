@@ -121,6 +121,7 @@ export function Invites({ invites }: { invites: Invite[] }) {
                 className={ui.select}
                 value={role}
                 onChange={(event) => setRole(event.target.value)}
+                aria-label="Role this invite grants"
               >
                 <option value="member">Member</option>
                 <option value="moderator">Moderator</option>

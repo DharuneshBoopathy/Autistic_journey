@@ -521,3 +521,104 @@
   font-weight: 600;
   border-bottom-color: var(--ink);
 }
+
+/* --- Narrow screens --------------------------------------------------------- */
+
+/*
+ * Below ~640px the shared primitives change shape rather than shrink.
+ *
+ * The failure this fixes: `.listRow` is a flex row, so on a phone the controls at
+ * its right kept their intrinsic width and squeezed `.listMain` to a few
+ * characters — a members list where every name read "O…". Wrapping the row so the
+ * content takes a full line and the controls sit beneath it costs one line of
+ * height and makes the row readable again.
+ */
+@media (max-width: 640px) {
+  .page,
+  .pageNarrow {
+    padding: var(--s5) var(--s4) var(--s7);
+  }
+
+  .masthead {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: var(--s4);
+  }
+
+  .actions {
+    width: 100%;
+  }
+
+  .listRow {
+    flex-wrap: wrap;
+    gap: var(--s2) var(--s3);
+    padding: var(--s3) var(--s1);
+  }
+
+  /* The name and its metadata take the whole line; controls wrap beneath. */
+  .listMain {
+    flex: 1 0 100%;
+  }
+
+  /* Long names and addresses wrap rather than being cut to an initial. */
+  .listTitle {
+    white-space: normal;
+  }
+
+  .sectionHead {
+    flex-wrap: wrap;
+    gap: var(--s2);
+  }
+
+  /* Tabs bleed to the edges so a scrolled tab is not clipped mid-word. */
+  .tabs {
+    margin-left: calc(-1 * var(--s4));
+    margin-right: calc(-1 * var(--s4));
+    padding-left: var(--s4);
+    padding-right: var(--s4);
+  }
+
+  .statGrid {
+    grid-template-columns: repeat(auto-fit, minmax(7.5rem, 1fr));
+  }
+}
+
+/*
+ * Touch pointers get larger hit areas.
+ *
+ * Keyed to the pointer rather than the width: a small laptop still has a mouse,
+ * and a tablet in landscape is wide but still operated with a thumb.
+ */
+@media (pointer: coarse) {
+  .button {
+    min-height: 2.5rem;
+  }
+
+  .buttonSmall {
+    min-height: 2.25rem;
+    padding: 0.35rem 0.7rem;
+  }
+
+  .input,
+  .select {
+    /* 16px stops iOS Safari zooming the page when a field takes focus. */
+    font-size: 1rem;
+    padding: 0.55rem 0.65rem;
+  }
+
+  .textarea {
+    font-size: 1rem;
+  }
+
+  .tab {
+    padding-top: var(--s3);
+    padding-bottom: var(--s4);
+  }
+
+  /* A row's title is often a link to the thing it names; on a touch screen that
+     link is the row's main target and needs to be more than a line of text. */
+  .listTitle a {
+    display: inline-block;
+    padding: 0.3rem 0;
+  }
+}

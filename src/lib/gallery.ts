@@ -172,6 +172,7 @@ export type PhotoDetail = PhotoCard & {
   semester: string | null;
   locationText: string | null;
   campusZone: string;
+  eventId: string | null;
   eventName: string | null;
   originalFilename: string | null;
   tags: string[];
@@ -195,6 +196,7 @@ export async function getPhoto(viewer: SessionUser, id: string): Promise<PhotoDe
       semester: string | null;
       location_text: string | null;
       campus_zone: string;
+      event_id: string | null;
       event_name: string | null;
       original_filename: string | null;
       tags: string[] | null;
@@ -202,7 +204,7 @@ export async function getPhoto(viewer: SessionUser, id: string): Promise<PhotoDe
       SELECT p.id, p.taken_at, p.width, p.height, p.caption, p.visibility,
              u.display_name AS uploader_name, p.uploader_id,
              p.academic_year, p.semester, p.location_text, p.campus_zone,
-             e.name AS event_name, p.original_filename,
+             p.event_id, e.name AS event_name, p.original_filename,
              ARRAY(SELECT t.name FROM photo_tags pt JOIN tags t ON t.id = pt.tag_id
                     WHERE pt.photo_id = p.id ORDER BY t.name) AS tags
         FROM visible_photos p
@@ -230,6 +232,7 @@ export async function getPhoto(viewer: SessionUser, id: string): Promise<PhotoDe
       semester: row.semester,
       locationText: row.location_text,
       campusZone: row.campus_zone,
+      eventId: row.event_id,
       eventName: row.event_name,
       originalFilename: row.original_filename,
       tags: row.tags ?? [],
@@ -251,10 +254,11 @@ export async function getFacets(viewer: SessionUser): Promise<{
   academicYears: Facet[];
   events: Facet[];
   uploaders: Facet[];
+  tags: Facet[];
   total: number;
 }> {
   return withViewer(viewer, async (tx: Tx) => {
-    const [years, events, uploaders, totals] = await Promise.all([
+    const [years, events, uploaders, tags, totals] = await Promise.all([
       tx.execute<{ value: string; count: number }>(sql`
         SELECT academic_year AS value, count(*)::int AS count
           FROM visible_photos WHERE academic_year IS NOT NULL
@@ -267,6 +271,12 @@ export async function getFacets(viewer: SessionUser): Promise<{
         SELECT u.id::text AS value, u.display_name AS label, count(*)::int AS count
           FROM visible_photos p JOIN users u ON u.id = p.uploader_id
          GROUP BY u.id, u.display_name ORDER BY count DESC, u.display_name LIMIT 50`),
+      tx.execute<{ value: string; count: number }>(sql`
+        SELECT t.name AS value, count(*)::int AS count
+          FROM visible_photos p
+          JOIN photo_tags pt ON pt.photo_id = p.id
+          JOIN tags t ON t.id = pt.tag_id
+         GROUP BY t.name ORDER BY count DESC, t.name LIMIT 30`),
       tx.execute<{ count: number }>(sql`SELECT count(*)::int AS count FROM visible_photos`),
     ]);
 
@@ -284,6 +294,11 @@ export async function getFacets(viewer: SessionUser): Promise<{
       uploaders: Array.from(uploaders).map((r) => ({
         value: r.value,
         label: r.label,
+        count: Number(r.count),
+      })),
+      tags: Array.from(tags).map((r) => ({
+        value: r.value,
+        label: r.value,
         count: Number(r.count),
       })),
       total: Number(Array.from(totals)[0]?.count ?? 0),

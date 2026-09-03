@@ -130,13 +130,64 @@
   min-height: 0;
 }
 
-@media (max-width: 720px) {
+/*
+ * Narrow viewports: the header becomes two rows.
+ *
+ * Seven sections cannot share one line with a wordmark and an account control at
+ * 390px — they end up in a 120px scroller with no hint that anything follows.
+ * Giving the navigation its own full-width row costs about 40px of height and
+ * makes the whole archive reachable with a thumb.
+ *
+ * The breakpoint is 860px rather than a phone width because the nav needs about
+ * 500px on its own: at 768px in one row the last section still fell off the end.
+ */
+@media (max-width: 860px) {
   .header {
-    gap: var(--s3);
-    padding: 0 var(--s3);
+    flex-wrap: wrap;
+    align-items: center;
+    height: auto;
+    gap: var(--s2) var(--s3);
+    padding: var(--s2) var(--s3) 0;
   }
+
   .wordmarkSub,
   .who {
     display: none;
+  }
+
+  /* The spacer is for the desktop single row; wrapping does its job here. */
+  .spacer {
+    display: none;
+  }
+
+  .identity {
+    margin-left: auto;
+  }
+
+  .nav {
+    order: 3;
+    width: 100%;
+    /* Bleed to the screen edges so a scrolled item is not clipped mid-word. */
+    margin: 0 calc(-1 * var(--s3));
+    padding: 0 var(--s3) var(--s2);
+    /*
+     * Fade the trailing edge. Seven sections do not fit on a 390px screen and the
+     * row scrolls; without this the last visible item ends flush against the edge
+     * and reads as the end of the list rather than the edge of the window.
+     */
+    mask-image: linear-gradient(to right, #000 calc(100% - 2rem), transparent);
+  }
+
+  /* Comfortable thumb targets, which 0.3rem of padding is not. */
+  .navLink {
+    padding: 0.5rem 0.65rem;
+  }
+
+  .signOut {
+    padding: 0.45rem 0.55rem;
+  }
+
+  .wordmark {
+    padding: 0.35rem 0;
   }
 }

@@ -128,6 +128,7 @@ export function AuditLog({ initial }: { initial: AuditRow[] }) {
         <span className={ui.label}>Show</span>
         <select
           className={ui.select}
+          aria-label="Show"
           value={action}
           onChange={(event) => {
             setAction(event.target.value);

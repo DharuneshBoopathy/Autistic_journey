@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { requireUser } from '@/lib/auth';
 import { getFacets, getTimeline, type TimelineFilters } from '@/lib/gallery';
 import { Timeline } from './timeline';
+import { Filters } from './filters';
 import { Search } from './icons';
 import styles from '@/components/gallery.module.css';
 import ui from '@/components/ui.module.css';
@@ -51,6 +52,9 @@ export default async function GalleryPage({
   };
 
   const filtered = Object.keys(query).length > 0;
+  // The free-text search has its own visible box, so it is not counted as a filter
+  // hidden behind the toggle.
+  const activeFilters = Object.keys(query).filter((key) => key !== 'q').length;
 
   return (
     <div className={styles.body}>
@@ -85,32 +89,42 @@ export default async function GalleryPage({
           </p>
         </div>
 
-        {filtered && (
-          <p className={styles.facetGroup}>
-            <Link href="/gallery" className={ui.badge}>
-              Clear all filters
-            </Link>
-          </p>
-        )}
+        {/* Collapsed on a phone, where a column of facets would otherwise push the
+            photos off the screen. Always shown on a wide viewport. */}
+        <Filters activeCount={activeFilters}>
+          {filtered && (
+            <p className={styles.facetGroup}>
+              <Link href="/gallery" className={ui.badge}>
+                Clear all filters
+              </Link>
+            </p>
+          )}
 
-        <FacetGroup
-          title="Academic year"
-          facets={facets.academicYears}
-          active={query.academicYear}
-          href={(v) => withFilter('academicYear', v)}
-        />
-        <FacetGroup
-          title="Event"
-          facets={facets.events}
-          active={query.eventId}
-          href={(v) => withFilter('eventId', v)}
-        />
-        <FacetGroup
-          title="Uploaded by"
-          facets={facets.uploaders}
-          active={query.uploaderId}
-          href={(v) => withFilter('uploaderId', v)}
-        />
+          <FacetGroup
+            title="Academic year"
+            facets={facets.academicYears}
+            active={query.academicYear}
+            href={(v) => withFilter('academicYear', v)}
+          />
+          <FacetGroup
+            title="Event"
+            facets={facets.events}
+            active={query.eventId}
+            href={(v) => withFilter('eventId', v)}
+          />
+          <FacetGroup
+            title="Uploaded by"
+            facets={facets.uploaders}
+            active={query.uploaderId}
+            href={(v) => withFilter('uploaderId', v)}
+          />
+          <FacetGroup
+            title="Tag"
+            facets={facets.tags}
+            active={query.tag}
+            href={(v) => withFilter('tag', v)}
+          />
+        </Filters>
       </aside>
 
       <div className={styles.content}>

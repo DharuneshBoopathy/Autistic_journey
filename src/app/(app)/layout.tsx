@@ -36,6 +36,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           <NavLink href="/gallery">Timeline</NavLink>
           <NavLink href="/albums">Albums</NavLink>
           <NavLink href="/groups">Groups</NavLink>
+          <NavLink href="/events">Events</NavLink>
           <NavLink href="/upload">Upload</NavLink>
           <NavLink href="/trash">Trash</NavLink>
           {hasRole(user, 'admin') && <NavLink href="/admin">Admin</NavLink>}
