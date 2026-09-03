@@ -45,10 +45,15 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         <div className={styles.spacer} />
 
         <div className={styles.identity}>
-          <span className={styles.who}>{user.displayName}</span>
-          <span className={styles.initials} aria-hidden="true">
-            {initials || '?'}
-          </span>
+          {/* The name and initials are the way in to the account screen — the place
+              people look for "change my password" without being told. */}
+          <Link href="/account" className={styles.identityLink}>
+            <span className={styles.who}>{user.displayName}</span>
+            <span className={styles.initials} aria-hidden="true">
+              {initials || '?'}
+            </span>
+            <span className={styles.srOnly}>Your account</span>
+          </Link>
           <form action={logoutAction}>
             <button type="submit" className={styles.signOut}>
               Sign out

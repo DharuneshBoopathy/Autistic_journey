@@ -40,6 +40,7 @@ deterrents rather than controls.
 | `/events` | Fests, trips, farewells. Anyone can add one; deleting is admin-only, because it detaches every photo filed under it. |
 | `/upload` | Drag-and-drop with a four-at-a-time queue, per-file status and retry-only-failed. |
 | `/trash` | Everything you deleted that is still inside the recovery window, with the days remaining. |
+| `/account` | Change your own password, and see and end your live sessions. |
 | `/admin` | Storage headroom, archive and queue counts, the approval queue, members, invites, processing failures, download grants and the audit log. |
 
 Every one of these reads through the same SQL predicate as the API. There is no
