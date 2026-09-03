@@ -3,13 +3,13 @@
 A private, collaborative photo archive for one college batch — 1st Year through
 Final Year. Batch members only.
 
-> **Status: feature-complete for one batch, not yet operated in anger.** Schema,
+> **Status: feature-complete for one batch, not yet deployed.** Schema,
 > authorization, auth, upload, storage, visibility control, organisation,
-> deletion/recovery, the admin surface and every screen are built and verified
-> against a real Postgres and a real browser. What has *not* happened is a
-> production deployment, a restore-from-backup drill, or any run at the photo
-> counts the brief describes. Do not put irreplaceable photographs in this until
-> backups are wired and tested.
+> deletion/recovery, the admin surface, every screen and the backup/restore path
+> are built and verified against a real Postgres and a real browser — including a
+> drill that restores a dump into a scratch database and runs the whole
+> authorization suite against the restored copy. What has *not* happened is a
+> production deployment or any run at the photo counts the brief describes.
 
 ## What it is
 
@@ -140,6 +140,13 @@ invisible — until a worker runs:
 npm run dev       # terminal 1
 npm run worker    # terminal 2
 ```
+
+### Backups
+
+`docs/OPERATIONS.md` is the runbook. In short: the database and the originals are
+backed up, derivatives are not (they are regenerated from the originals), and
+`npm run backup:drill` proves the whole path by restoring into a scratch database
+and running the authorization suite against it.
 
 ### The authorization suite
 

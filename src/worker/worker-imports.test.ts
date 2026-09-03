@@ -1,4 +1,4 @@
-import { readFile } from 'node:fs/promises';
+import { readdir, readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 
@@ -17,7 +17,14 @@ import { describe, expect, it } from 'vitest';
  */
 
 const SRC = path.join(process.cwd(), 'src');
-const ENTRY_POINTS = ['worker/index.ts', 'worker/drain.ts', 'worker/sweep.ts'];
+/*
+ * Every non-test file in `src/worker` is an entry point as far as this rule is
+ * concerned — they all run outside Next, and a hand-maintained list is exactly the
+ * kind of thing a new script gets forgotten from.
+ */
+const ENTRY_POINTS = (await readdir(path.join(SRC, 'worker')))
+  .filter((f) => f.endsWith('.ts') && !f.endsWith('.test.ts'))
+  .map((f) => `worker/${f}`);
 
 /** Resolve an import specifier to a file on disk, or null if it is a package. */
 async function resolveLocal(specifier: string, fromFile: string): Promise<string | null> {
