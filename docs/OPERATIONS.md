@@ -197,6 +197,70 @@ that page and nothing else. Configuration is validated at startup by
 and answering every request with a 500 — which is what a rolling deploy needs in
 order to stop and keep the previous version.
 
+### Railway, specifically
+
+Both services build from the same `Dockerfile` in this repository; `railway.json`
+carries the web service's defaults.
+
+1. **New Project → Deploy from GitHub repo**, pointed at this repository and the
+   branch you want live.
+2. **Add a Postgres database** to the project. Railway injects `DATABASE_URL` into
+   every service, so nothing has to be copied by hand.
+3. **The web service** picks up `railway.json`: Dockerfile build, `node server.js`,
+   health check on `/api/health`.
+4. **Add a second service from the same repo** for the worker, and override its
+   start command:
+
+   ```
+   node dist/worker/index.mjs
+   ```
+
+   It needs the same variables as the web service. It serves no traffic, so give it
+   no domain and no health check.
+5. **Variables**, on both services:
+
+   | | |
+   |---|---|
+   | `SESSION_SECRET` | generated on your machine, not in a chat window |
+   | `APP_ORIGIN` | `https://` and your domain — the app refuses to start otherwise |
+   | `STORAGE_DERIVATIVES_DRIVER`, `STORAGE_ORIGINALS_DRIVER` | `r2` |
+   | `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET` | from Cloudflare |
+   | `NODE_ENV` | `production` |
+
+6. **Custom domain** on the web service. Railway issues the certificate; add the
+   CNAME it gives you at your registrar. Set `APP_ORIGIN` to that address.
+7. **Migrate and seed**, once, from your own machine:
+
+   ```bash
+   railway run --service web node dist/db/migrate.mjs
+   ADMIN_PASSWORD='…' railway run --service web node dist/db/seed.mjs \
+     --batch "CSE 2021-2025" --start 2021 --end 2025 \
+     --email you@example.com --name "Your Name"
+   ```
+
+Expect roughly $5–10 a month for the three services together. The worker is small
+but must stay awake: it is what turns an upload into something visible, and a
+sleeping worker means photos that upload successfully and never appear.
+
+### Why not Vercel
+
+Two hard blocks, not preferences:
+
+- **Uploads.** Vercel caps a serverless function's request body at 4.5 MB.
+  `/api/upload` reads the whole multipart body server-side, and
+  `MAX_UPLOAD_BYTES` is 50 MB, because a modern phone photo is regularly 4–12 MB.
+  Most uploads would simply fail. The workaround — presigned direct-to-bucket
+  uploads — would let a client write into storage without passing through the
+  magic-byte check and the re-encode that neutralises polyglot files, which is a
+  security regression, not a deployment detail.
+- **The worker.** It is a long-running process, which Vercel does not host. Driving
+  it from Vercel Cron instead caps out at once per day on the Hobby plan, so a
+  photo uploaded on Monday would appear on Tuesday.
+
+Render works but costs more for the same shape: the web service, the worker and
+the database are three paid instances, and Render's free tiers either sleep or
+expire.
+
 ### Scheduling the housekeeping
 
 The worker prunes sessions, requeues stalled jobs and runs the purge sweep on its

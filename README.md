@@ -144,10 +144,14 @@ npm run worker    # terminal 2
 
 ### Deploying
 
-`docs/OPERATIONS.md` has the runbook. In short: `docker compose run --rm migrate`,
-seed the first administrator, `docker compose up -d`, and put TLS in front of it —
-session cookies use the `__Host-` prefix and the app refuses to start on plain
-http in production.
+`docs/OPERATIONS.md` has the runbook — Railway for a managed deploy, or
+`docker compose` on a box you own. Put TLS in front of it either way: session
+cookies use the `__Host-` prefix and the app refuses to start on plain http in
+production.
+
+**Not Vercel.** Its 4.5 MB request-body cap breaks uploads of ordinary phone
+photos, and the derivative worker is a long-running process it cannot host. The
+runbook explains both.
 
 ### Backups
 
