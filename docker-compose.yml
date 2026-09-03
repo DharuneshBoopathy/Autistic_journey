@@ -74,6 +74,8 @@ services:
       # Only used when STORAGE_*_DRIVER=local. On R2 this is inert.
       - storage:/app/var/storage
 
+  # Its own process, which is the right shape wherever the host will run one.
+  # On hosting that will not, drop this service and set WORKER_IN_PROCESS=true.
   worker:
     build: .
     restart: unless-stopped

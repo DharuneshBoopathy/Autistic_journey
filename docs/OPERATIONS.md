@@ -119,7 +119,7 @@ Two processes and a database:
 | | |
 |---|---|
 | **web** | `node server.js` — Next's standalone output |
-| **worker** | `node dist/worker/index.mjs` — generates derivatives, purges expired photos, prunes sessions |
+| **worker** | `node dist/worker/index.mjs` — generates derivatives, purges expired photos, prunes sessions. On hosting that will not run a second process, set `WORKER_IN_PROCESS=true` and drop this one; see *Running it for nothing*. |
 | **Postgres 16+** | Managed is the better default: it gives point-in-time recovery, which the dumps above cannot |
 
 Both processes come from the same image. They share every dependency, so building
@@ -261,12 +261,37 @@ the backups running off-machine and that becomes an inconvenience rather than a
 disaster. You also administer a server: security updates, disk, the occasional
 reboot. That is the real price, and it is paid in attention rather than money.
 
-**The other free shape**, if you would rather not run a machine: a free PaaS web
-service plus Neon's free Postgres plus R2's free 10 GB. It does not work as well —
-free web tiers sleep after fifteen minutes and take the better part of a minute to
-wake, and none of them run a second always-on process, so the worker has nowhere to
-live and uploaded photos never gain the thumbnails that make them visible. Free
-hosting can serve this app or process its uploads, not both.
+**The other free shape**, if you would rather not run a machine: a free web
+service, Neon's free Postgres, and object storage.
+
+The obstacle there is not the web server or the database — both are freely
+available — but the worker. Free tiers do not run a second always-on process, and
+without a worker an upload never gains the thumbnail that makes it visible, so the
+archive appears to accept photographs and then lose them.
+
+`WORKER_IN_PROCESS=true` removes that obstacle by running the worker loop inside
+the web server. One service then does both jobs, and any free web hosting is
+enough.
+
+What it costs, stated plainly:
+
+- **A resize competes with page loads.** `sharp` does the heavy work off the main
+  thread, so this is milder than it sounds, but a bulk upload of two hundred photos
+  will make the site feel slower while it catches up. Two processes exist precisely
+  so that cannot happen.
+- **Memory.** A 12-megapixel resize wants a few hundred megabytes on top of the
+  server. On a 512 MB free instance that is tight, and a large photo can push it
+  over. Prefer an instance with 1 GB if the platform offers one.
+- **A sleeping host processes nothing while asleep.** In practice this matters less
+  than it appears: uploads happen while somebody is using the site, which is exactly
+  when the process is awake. Housekeeping — the purge sweep, session pruning — waits
+  for the next visitor rather than running to a clock.
+
+It is safe on several instances at once: jobs are claimed with `FOR UPDATE SKIP
+LOCKED`, so no two workers ever take the same photo.
+
+The separate process remains the default and the better shape. Use this where the
+alternative is no worker at all.
 
 ### Railway, specifically
 

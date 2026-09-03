@@ -48,6 +48,26 @@ const schema = z.object({
   GDRIVE_REFRESH_TOKEN: z.string().optional(),
   GDRIVE_FOLDER_ID: z.string().optional(),
 
+  /**
+   * Run the derivative worker inside the web server instead of as its own process.
+   *
+   * Off by default, because the separation is real: a resize is slow and
+   * memory-hungry, and keeping it out of the request handler is why it was built as
+   * a second process in the first place.
+   *
+   * It exists because free hosting will not run a second always-on process, and
+   * without a worker an upload never gains the thumbnail that makes it visible —
+   * so the archive appears to accept photographs and then lose them. Sharing one
+   * process is a worse shape than two; it is a far better one than none.
+   *
+   * Safe to enable on several instances at once: jobs are claimed with
+   * `FOR UPDATE SKIP LOCKED`, so no two workers take the same photo.
+   */
+  WORKER_IN_PROCESS: z
+    .enum(['true', 'false'])
+    .default('false')
+    .transform((v) => v === 'true'),
+
   APP_ORIGIN: z.string().url().default('http://localhost:3000'),
   DELETED_RETENTION_DAYS: z.coerce.number().int().positive().default(30),
   MAX_UPLOAD_BYTES: z.coerce.number().int().positive().default(52_428_800),

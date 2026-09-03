@@ -2,55 +2,29 @@
  * Derivative-generation worker (`npm run worker`).
  *
  * Runs as a separate process so a slow or memory-hungry resize never occupies a
- * request handler. Several instances may run concurrently: jobs are claimed with
- * `FOR UPDATE SKIP LOCKED`, so no two workers take the same photo.
+ * request handler. This is the right shape and the default one; `WORKER_IN_PROCESS`
+ * exists for hosting that will not run a second process, and trades exactly that
+ * isolation away.
  *
- * The work itself lives in `./process`, which tests drive directly.
+ * The loop itself lives in `./loop`, shared with the in-process variant so the two
+ * cannot drift. The work lives in `./process`, which tests drive directly.
  */
 import { client } from '@/db';
-import { runOnce } from './process';
-import { runMaintenance } from './maintenance';
-
-const IDLE_DELAY_MS = 2_000;
-
-/**
- * Housekeeping cadence, counted in idle passes (~2s each), so roughly every minute.
- *
- * Counted in passes rather than wall-clock so a worker draining a large backlog does
- * not stop to tidy up mid-flight — maintenance waits until there is nothing else to
- * do, which is exactly when it should run.
- */
-const PASSES_BETWEEN_SWEEPS = 30;
+import { runWorkerLoop } from './loop';
 
 async function main() {
   console.warn('[worker] started');
 
-  let running = true;
+  const controller = new AbortController();
   const stop = () => {
     console.warn('[worker] shutting down after the current batch');
-    running = false;
+    controller.abort();
   };
   process.on('SIGINT', stop);
   process.on('SIGTERM', stop);
 
-  let sinceSweep = 0;
-
-  while (running) {
-    const processed = await runOnce();
-
-    if (++sinceSweep >= PASSES_BETWEEN_SWEEPS) {
-      await runMaintenance();
-      sinceSweep = 0;
-    }
-
-    // Only pause when there was nothing to do, so a backlog drains at full speed.
-    if (processed === 0) {
-      await new Promise((resolve) => setTimeout(resolve, IDLE_DELAY_MS));
-    }
-  }
-
+  await runWorkerLoop({ signal: controller.signal });
   await client.end();
-  console.warn('[worker] stopped');
 }
 
 main().catch((error: unknown) => {
