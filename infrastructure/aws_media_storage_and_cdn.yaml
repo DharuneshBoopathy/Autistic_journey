@@ -1,0 +1,213 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'The Autistic Journey - Production S3 Private Media Vault and CloudFront CDN'
+
+Parameters:
+  EnvironmentName:
+    Type: String
+    Default: 'production'
+    Description: 'Target deployment environment'
+  
+  MediaBucketName:
+    Type: String
+    Default: 'the-autistic-journey-media-vault'
+    Description: 'Globally unique name for the private media storage bucket'
+
+  WebBucketName:
+    Type: String
+    Default: 'the-autistic-journey-web-hosting'
+    Description: 'Globally unique name for the frontend static hosting bucket'
+
+  DomainName:
+    Type: String
+    Default: ''
+    Description: 'Custom domain name (leave empty if using default cloudfront.net domain)'
+
+  AcmCertificateArn:
+    Type: String
+    Default: ''
+    Description: 'ACM Certificate ARN in us-east-1 for custom domain HTTPS (optional)'
+
+Conditions:
+  HasCustomDomain: !Not [!Equals [!Ref DomainName, '']]
+  HasCertificate: !Not [!Equals [!Ref AcmCertificateArn, '']]
+
+Resources:
+  # ============================================================================
+  # 1. Private Media Vault S3 Bucket (Zero Public Access)
+  # ============================================================================
+  MediaVaultBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub '${MediaBucketName}-${AWS::AccountId}-${AWS::Region}'
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        IgnorePublicAcls: true
+        BlockPublicPolicy: true
+        RestrictPublicBuckets: true
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      VersioningConfiguration:
+        Status: Enabled
+      LifecycleConfiguration:
+        Rules:
+          - Id: AbortIncompleteMultipartUploads
+            Status: Enabled
+            AbortIncompleteMultipartUpload:
+              DaysAfterInitiation: 7
+          - Id: TransitionOldVersionsToGlacier
+            Status: Enabled
+            NoncurrentVersionTransitions:
+              - TransitionInDays: 30
+                StorageClass: STANDARD_IA
+      CorsConfiguration:
+        CorsRules:
+          - AllowedHeaders: ['*']
+            AllowedMethods: [GET, PUT, POST, HEAD]
+            AllowedOrigins: ['*']
+            MaxAge: 3600
+
+  # ============================================================================
+  # 2. Frontend Web Hosting S3 Bucket (Private, accessed strictly via OAC)
+  # ============================================================================
+  WebHostingBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub '${WebBucketName}-${AWS::AccountId}-${AWS::Region}'
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        IgnorePublicAcls: true
+        BlockPublicPolicy: true
+        RestrictPublicBuckets: true
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+
+  # CloudFront Origin Access Control (OAC)
+  CloudFrontOriginAccessControl:
+    Type: AWS::CloudFront::OriginAccessControl
+    Properties:
+      OriginAccessControlConfig:
+        Name: !Sub 'OAC-${AWS::StackName}-Web'
+        OriginAccessControlOriginType: s3
+        SigningBehavior: always
+        SigningProtocol: sigv4
+
+  WebHostingBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref WebHostingBucket
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: AllowCloudFrontServicePrincipalReadOnly
+            Effect: Allow
+            Principal:
+              Service: cloudfront.amazonaws.com
+            Action: 's3:GetObject'
+            Resource: !Sub '${WebHostingBucket.Arn}/*'
+            Condition:
+              StringEquals:
+                AWS:SourceArn: !Sub 'arn:aws:cloudfront::${AWS::AccountId}:distribution/${WebDistribution}'
+
+  # ============================================================================
+  # 3. CloudFront CDN Distribution
+  # ============================================================================
+  WebDistribution:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        Enabled: true
+        Comment: 'The Autistic Journey - High-Performance CDN Edge'
+        DefaultRootObject: 'index.html'
+        PriceClass: PriceClass_100 # Low cost: US, Canada, Europe, Asia
+        Aliases: !If [HasCustomDomain, [!Ref DomainName], !Ref 'AWS::NoValue']
+        Origins:
+          - Id: S3WebHostingOrigin
+            DomainName: !GetAtt WebHostingBucket.RegionalDomainName
+            OriginAccessControlId: !Ref CloudFrontOriginAccessControl
+            S3OriginConfig: {}
+        DefaultCacheBehavior:
+          TargetOriginId: S3WebHostingOrigin
+          ViewerProtocolPolicy: redirect-to-https
+          AllowedMethods: [GET, HEAD, OPTIONS]
+          CachedMethods: [GET, HEAD]
+          Compress: true
+          ForwardedValues:
+            QueryString: false
+            Cookies:
+              Forward: none
+        # Single-Page Application (SPA) routing for GoRouter
+        CustomErrorResponses:
+          - ErrorCode: 403
+            ResponseCode: 200
+            ResponsePagePath: '/index.html'
+            ErrorCachingMinTTL: 10
+          - ErrorCode: 404
+            ResponseCode: 200
+            ResponsePagePath: '/index.html'
+            ErrorCachingMinTTL: 10
+        ViewerCertificate:
+          !If
+            - HasCertificate
+            - AcmCertificateArn: !Ref AcmCertificateArn
+              SslSupportMethod: sni-only
+              MinimumProtocolVersion: TLSv1.2_2021
+            - CloudFrontDefaultCertificate: true
+
+  # ============================================================================
+  # 4. IAM Least-Privilege Policy for FastAPI Backend
+  # ============================================================================
+  BackendS3ExecutionPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      ManagedPolicyName: !Sub '${AWS::StackName}-BackendS3Policy'
+      Description: 'Strict least-privilege permissions for media uploads and signed delivery'
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: ScopedMediaBucketAccess
+            Effect: Allow
+            Action:
+              - 's3:PutObject'
+              - 's3:GetObject'
+              - 's3:DeleteObject'
+              - 's3:AbortMultipartUpload'
+              - 's3:ListMultipartUploadParts'
+            Resource:
+              - !Sub '${MediaVaultBucket.Arn}/*'
+          - Sid: ScopedBucketListing
+            Effect: Allow
+            Action:
+              - 's3:ListBucket'
+            Resource:
+              - !GetAtt MediaVaultBucket.Arn
+
+Outputs:
+  MediaVaultBucketName:
+    Description: 'Private S3 Media Bucket Name'
+    Value: !Ref MediaVaultBucket
+    Export:
+      Name: !Sub '${AWS::StackName}-MediaBucketName'
+
+  CloudFrontDistributionId:
+    Description: 'CloudFront Distribution ID'
+    Value: !Ref WebDistribution
+
+  CloudFrontDomainName:
+    Description: 'CloudFront CDN Public URL'
+    Value: !GetAtt WebDistribution.DomainName
+
+  WebHostingBucketName:
+    Description: 'Frontend Static Web Hosting S3 Bucket Name'
+    Value: !Ref WebHostingBucket
+    Export:
+      Name: !Sub '${AWS::StackName}-WebBucketName'
+
+  BackendS3PolicyArn:
+    Description: 'IAM Managed Policy ARN for FastAPI Backend'
+    Value: !Ref BackendS3ExecutionPolicy
+    Export:
+      Name: !Sub '${AWS::StackName}-BackendS3PolicyArn'

@@ -1,0 +1,251 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'The Autistic Journey - Production EC2 Backend with Automated SSL and S3 Media Integration'
+
+Parameters:
+  EnvironmentName:
+    Type: String
+    Default: 'production'
+    Description: 'Target environment name'
+
+  InstanceType:
+    Type: String
+    Default: 't3.micro'
+    AllowedValues: ['t3.micro', 't3.small', 't2.micro', 't4g.micro', 't4g.small']
+    Description: 'EC2 Instance Type (Free-tier eligible)'
+
+  AmiId:
+    Type: 'AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>'
+    Default: '/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64'
+    Description: 'SSM parameter pointing to latest Amazon Linux 2023 AMI'
+
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+    Default: 'vpc-06b3fc4ac3d3842cb'
+    Description: 'VPC ID for backend deployment'
+
+  SubnetId:
+    Type: AWS::EC2::Subnet::Id
+    Default: 'subnet-092c35e539d9920c5'
+    Description: 'Public Subnet ID for backend deployment'
+
+  DomainName:
+    Type: String
+    Default: 'api.theautisticjourney.me'
+    Description: 'Target custom API domain'
+
+  MediaBucketName:
+    Type: String
+    Default: 'the-autistic-journey-media-vault-626635402942-ap-south-1'
+    Description: 'Private S3 Media Bucket Name'
+
+Resources:
+  # ============================================================================
+  # 1. Security Group
+  # ============================================================================
+  BackendSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: 'Allow inbound HTTP and HTTPS traffic for FastAPI Backend'
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: '0.0.0.0/0'
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: '0.0.0.0/0'
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-BackendSG'
+
+  # ============================================================================
+  # 2. IAM Role & Instance Profile (SSM + S3 Least Privilege)
+  # ============================================================================
+  BackendInstanceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub '${AWS::StackName}-InstanceRole'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ec2.amazonaws.com
+            Action: 'sts:AssumeRole'
+      ManagedPolicyArns:
+        - 'arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore'
+        - 'arn:aws:iam::626635402942:policy/taj-media-vault-production-BackendS3Policy'
+
+  BackendInstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      InstanceProfileName: !Sub '${AWS::StackName}-Profile'
+      Roles:
+        - !Ref BackendInstanceRole
+
+  # ============================================================================
+  # 3. EC2 Instance
+  # ============================================================================
+  BackendInstance:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: !Ref InstanceType
+      ImageId: !Ref AmiId
+      SubnetId: !Ref SubnetId
+      IamInstanceProfile: !Ref BackendInstanceProfile
+      SecurityGroupIds:
+        - !Ref BackendSecurityGroup
+      BlockDeviceMappings:
+        - DeviceName: '/dev/xvda'
+          Ebs:
+            VolumeSize: 20
+            VolumeType: 'gp3'
+            Encrypted: true
+            DeleteOnTermination: true
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-Instance'
+        - Key: Environment
+          Value: !Ref EnvironmentName
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          set -eux
+          dnf update -y
+          dnf install -y git python3.11 python3.11-pip tar gzip
+
+          # Install Caddy web server
+          curl -sSL "https://github.com/caddyserver/caddy/releases/download/v2.8.4/caddy_2.8.4_linux_amd64.tar.gz" -o /tmp/caddy.tar.gz
+          tar -xzf /tmp/caddy.tar.gz -C /usr/local/bin caddy
+          chmod +x /usr/local/bin/caddy
+
+          # Prepare application directory
+          mkdir -p /opt/taj-backend
+          git clone https://github.com/DharuneshBoopathy/Autistic_journey.git /tmp/taj-repo
+          cp -r /tmp/taj-repo/backend/* /opt/taj-backend/
+          rm -rf /tmp/taj-repo
+
+          # Setup Python environment
+          python3.11 -m venv /opt/taj-backend/venv
+          /opt/taj-backend/venv/bin/pip install --upgrade pip
+          /opt/taj-backend/venv/bin/pip install -r /opt/taj-backend/requirements.txt
+
+          # Configure production environment
+          cat <<EOF > /opt/taj-backend/.env
+          PROJECT_NAME=The Autistic Journey API
+          ENVIRONMENT=production
+          DEBUG=false
+          API_V1_STR=/api/v1
+          SECRET_KEY=taj-prod-session-key-autistic-journey-2023-2027-vault
+          ALGORITHM=HS256
+          ACCESS_TOKEN_EXPIRE_MINUTES=60
+          REFRESH_TOKEN_EXPIRE_DAYS=7
+          CORS_ORIGINS=["https://theautisticjourney.me","https://gallery.theautisticjourney.me","https://api.theautisticjourney.me","http://localhost:3000","http://localhost:8000","http://localhost:8080"]
+          DATABASE_URL=sqlite:////opt/taj-backend/taj_production.db
+          AWS_REGION=${AWS::Region}
+          S3_BUCKET_NAME=${MediaBucketName}
+          S3_PRESIGNED_EXPIRY_SECONDS=900
+          CLOUDFRONT_DOMAIN=
+          MAX_FILE_SIZE_BYTES=524288000
+          EOF
+
+          # Initialize database schema
+          cd /opt/taj-backend
+          /opt/taj-backend/venv/bin/python -c "from app.db.session import engine; from app.models import Base; Base.metadata.create_all(bind=engine)"
+
+          # Set permissions
+          chown -R ec2-user:ec2-user /opt/taj-backend
+
+          # Create systemd service for FastAPI
+          cat <<EOF > /etc/systemd/system/taj-backend.service
+          [Unit]
+          Description=The Autistic Journey FastAPI Backend Service
+          After=network.target
+
+          [Service]
+          Type=simple
+          User=ec2-user
+          WorkingDirectory=/opt/taj-backend
+          EnvironmentFile=/opt/taj-backend/.env
+          ExecStart=/opt/taj-backend/venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8000 --proxy-headers --forwarded-allow-ips *
+          Restart=always
+          RestartSec=5
+
+          [Install]
+          WantedBy=multi-user.target
+          EOF
+
+          systemctl daemon-reload
+          systemctl enable taj-backend
+          systemctl start taj-backend
+
+          # Configure Caddy for reverse proxy and automatic Let's Encrypt HTTPS
+          mkdir -p /etc/caddy
+          cat <<EOF > /etc/caddy/Caddyfile
+          :80 {
+              reverse_proxy 127.0.0.1:8000
+          }
+
+          ${DomainName} {
+              reverse_proxy 127.0.0.1:8000
+          }
+          EOF
+
+          # Create systemd service for Caddy
+          cat <<EOF > /etc/systemd/system/caddy.service
+          [Unit]
+          Description=Caddy Web Server with Automatic TLS
+          After=network.target network-online.target
+          Requires=network-online.target
+
+          [Service]
+          Type=notify
+          ExecStart=/usr/local/bin/caddy run --environ --config /etc/caddy/Caddyfile
+          ExecReload=/usr/local/bin/caddy reload --config /etc/caddy/Caddyfile
+          TimeoutStopSec=5s
+          LimitNOFILE=1048576
+          LimitNPROC=512
+          PrivateTmp=true
+          ProtectSystem=full
+          AmbientCapabilities=CAP_NET_ADMIN CAP_NET_BIND_SERVICE
+
+          [Install]
+          WantedBy=multi-user.target
+          EOF
+
+          systemctl daemon-reload
+          systemctl enable caddy
+          systemctl start caddy
+
+  # ============================================================================
+  # 4. Elastic IP (Static Public IPv4)
+  # ============================================================================
+  BackendElasticIp:
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+      InstanceId: !Ref BackendInstance
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-StaticIP'
+
+Outputs:
+  PublicIp:
+    Description: 'Static Elastic IP Address for DNS A Record'
+    Value: !Ref BackendElasticIp
+    Export:
+      Name: !Sub '${AWS::StackName}-PublicIp'
+
+  InstanceId:
+    Description: 'EC2 Instance ID'
+    Value: !Ref BackendInstance
+
+  HealthEndpointHttp:
+    Description: 'Direct HTTP Health Endpoint URL'
+    Value: !Sub 'http://${BackendElasticIp}/health'
+
+  HealthEndpointHttps:
+    Description: 'Target HTTPS Health Endpoint URL (after DNS propagation)'
+    Value: !Sub 'https://${DomainName}/health'

@@ -1,0 +1,97 @@
+# ==============================================================================
+# The Autistic Journey - Master .gitignore
+# ==============================================================================
+
+# --- Secrets & Environment Configurations ---
+.env
+*.env
+*.env.local
+*.env.production
+.env.*.local
+*.pem
+*.key
+*.cert
+*.crt
+*.pfx
+*.p12
+
+# --- Database & Local Storage ---
+*.db
+*.sqlite
+*.sqlite3
+taj_dev.db
+taj_dev.db-journal
+
+# --- Python / Backend ---
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+.pytest_cache/
+.coverage
+htmlcov/
+dist/
+*.egg-info/
+.mypy_cache/
+.ruff_cache/
+
+# --- Flutter / Frontend ---
+the_autistic_journey/.dart_tool/
+the_autistic_journey/.flutter-plugins-dependencies
+the_autistic_journey/.pub-cache/
+the_autistic_journey/.pub/
+the_autistic_journey/build/
+build/
+.packages
+
+# --- Android Local & Build Artifacts ---
+the_autistic_journey/android/local.properties
+the_autistic_journey/android/.gradle/
+the_autistic_journey/android/app/build/
+the_autistic_journey/android/captures/
+the_autistic_journey/android/app/release/
+the_autistic_journey/android/app/debug/
+*.apk
+*.aab
+
+# --- iOS & macOS Artifacts ---
+the_autistic_journey/ios/Flutter/.last_build_id
+the_autistic_journey/ios/Pods/
+the_autistic_journey/ios/.symlinks/
+*.ipa
+.DS_Store
+
+# --- IDEs & Editor State ---
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+*.swp
+*.swo
+
+# --- Logs & Temp ---
+*.log
+scratch_*.ps1
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# --- Cloud & Terraform State ---
+.terraform/
+*.tfstate
+*.tfstate.*
+.serverless/
+.aws-sam/
+cdk.out/
+
+# --- Private User Media Vault Dumps ---
+/media_vault/
+/uploads/
+/temp_uploads/

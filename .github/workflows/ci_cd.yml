@@ -1,0 +1,124 @@
+name: Build, Test & Deploy Pipeline
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+permissions:
+  id-token: write   # Required for AWS OIDC Federation
+  contents: read
+
+jobs:
+  # ============================================================================
+  # 1. Backend Validation
+  # ============================================================================
+  backend-checks:
+    name: Backend Lint & Pytest
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Source
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install Dependencies
+        run: |
+          cd backend
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run Pytest Suite
+        run: |
+          cd backend
+          pytest tests/test_api.py -v
+
+  # ============================================================================
+  # 2. Frontend Validation & Production Web Build
+  # ============================================================================
+  frontend-checks:
+    name: Flutter Analyze, Test & Web Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Source
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.47.7'
+          channel: 'stable'
+          cache: true
+
+      - name: Install Dependencies
+        run: |
+          cd the_autistic_journey
+          flutter pub get
+
+      - name: Static Analysis
+        run: |
+          cd the_autistic_journey
+          flutter analyze
+
+      - name: Run Flutter Tests
+        run: |
+          cd the_autistic_journey
+          flutter test
+
+      - name: Build Flutter Web Release
+        run: |
+          cd the_autistic_journey
+          flutter build web --release --dart-define=API_BASE_URL=${{ secrets.PROD_API_BASE_URL || 'https://api.theautisticjourney.com' }}
+
+      - name: Upload Web Build Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: flutter-web-build
+          path: the_autistic_journey/build/web
+
+  # ============================================================================
+  # 3. CloudFront & S3 Deployment (Production Branch Only)
+  # ============================================================================
+  deploy-web:
+    name: Deploy Web to S3 & CloudFront
+    needs: [backend-checks, frontend-checks]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Source
+        uses: actions/checkout@v4
+
+      - name: Download Web Build Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: flutter-web-build
+          path: build/web
+
+      - name: Configure AWS Credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ secrets.AWS_REGION || 'ap-south-1' }}
+        continue-on-error: true
+
+      - name: Sync Web Assets to S3
+        if: env.AWS_DEPLOY_ROLE_ARN != ''
+        run: |
+          aws s3 sync build/web s3://${{ secrets.AWS_S3_WEB_BUCKET }} --delete --cache-control "public, max-age=31536000, immutable"
+          aws s3 cp build/web/index.html s3://${{ secrets.AWS_S3_WEB_BUCKET }}/index.html --cache-control "no-cache, no-store, must-revalidate"
+
+      - name: Invalidate CloudFront Cache
+        if: env.AWS_DEPLOY_ROLE_ARN != ''
+        run: |
+          aws cloudfront create-invalidation --distribution-id ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }} --paths "/*"
