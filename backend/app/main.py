@@ -140,6 +140,32 @@ async def add_security_headers(request: Request, call_next):
 app.include_router(api_router, prefix=settings.API_V1_STR)
 
 
+@app.get("/", tags=["Root"])
+def root_status():
+    return {
+        "status": "online",
+        "app": settings.PROJECT_NAME,
+        "version": "1.0.0",
+        "api_v1_prefix": settings.API_V1_STR,
+        "health_check": "/health",
+        "frontend_gallery": "https://gallery.theautisticjourney.me",
+    }
+
+
+@app.get(settings.API_V1_STR, tags=["Root"])
+def api_v1_root():
+    return {
+        "status": "online",
+        "version": "v1",
+        "endpoints": {
+            "auth": f"{settings.API_V1_STR}/auth",
+            "albums": f"{settings.API_V1_STR}/albums",
+            "media": f"{settings.API_V1_STR}/media",
+            "admin": f"{settings.API_V1_STR}/admin",
+        },
+    }
+
+
 @app.get("/health", tags=["Health"])
 def root_health():
     """Root health check for AWS ALB / Target Groups."""

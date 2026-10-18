@@ -64,14 +64,16 @@ class ImageService:
 
             # Otherwise download from S3
             if not image_bytes and s3_service.s3_client:
-                resp = s3_service.s3_client.get_object(
-                    Bucket=s3_service.bucket_name,
-                    Key=s3_key,
-                )
-                image_bytes = resp["Body"].read()
+                try:
+                    resp = s3_service.s3_client.get_object(
+                        Bucket=s3_service.bucket_name,
+                        Key=s3_key,
+                    )
+                    image_bytes = resp["Body"].read()
+                except Exception as e:
+                    logger.warning(f"S3 key {s3_key} not accessible yet (sync in progress): {e}")
 
             if not image_bytes:
-                logger.error(f"Cannot obtain image bytes for s3_key={s3_key}")
                 return None
 
             # 2. Open image with Pillow (handles JPEG, PNG, WEBP, and HEIC via pillow_heif)
