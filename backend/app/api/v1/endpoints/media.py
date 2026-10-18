@@ -3,6 +3,7 @@ from typing import List, Optional
 from datetime import datetime, timezone
 import os
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi.responses import FileResponse, RedirectResponse
 from sqlalchemy.orm import Session
 from app.db.session import get_db
 from app.db.models import Album, Media, DeletionRequest, User
@@ -14,6 +15,7 @@ from app.schemas.album import (
 )
 from app.api.deps import get_current_active_user
 from app.services.s3_service import s3_service
+from app.services.image_service import image_service
 from app.services.audit_service import audit_service
 from app.core.config import settings
 
@@ -159,13 +161,61 @@ def confirm_upload(
     )
 
 
+@router.get("/thumbnail/{media_id}")
+def get_media_thumbnail(
+    media_id: str,
+    size: str = Query("thumb", pattern="^(thumb|preview)$"),
+    db: Session = Depends(get_db),
+):
+    """Serve ultra-fast, cached WebP thumbnails and previews with 1-year browser caching."""
+    media = db.query(Media).filter(Media.id == media_id).first()
+    if not media:
+        raise HTTPException(status_code=404, detail="Media not found")
+
+    # If video, redirect to S3 presigned URL
+    if media.mime_type.startswith("video/"):
+        url = s3_service.generate_presigned_download_url(media.original_s3_key)
+        return RedirectResponse(url)
+
+    cache_path = image_service.get_or_create_thumbnail(
+        media_id=media.id,
+        s3_key=media.original_s3_key,
+        size=size,
+    )
+    if not cache_path or not cache_path.exists():
+        # Fallback to direct S3 presigned URL
+        url = s3_service.generate_presigned_download_url(media.original_s3_key)
+        return RedirectResponse(url)
+
+    return FileResponse(
+        str(cache_path),
+        media_type="image/webp",
+        headers={
+            "Cache-Control": "public, max-age=31536000, immutable",
+        },
+    )
+
+
+@router.get("/{media_id}/download")
+def download_media_original(
+    media_id: str,
+    db: Session = Depends(get_db),
+):
+    """Generate on-demand presigned S3 download URL for full original media."""
+    media = db.query(Media).filter(Media.id == media_id).first()
+    if not media:
+        raise HTTPException(status_code=404, detail="Media not found")
+    url = s3_service.generate_presigned_download_url(media.original_s3_key)
+    return RedirectResponse(url)
+
+
 @router.get("/album/{album_id}", response_model=List[MediaResponse])
 def get_album_media(
     album_id: str,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
 ):
-    """Retrieve all active media items in an album with temporary signed delivery URLs (FR-D02)."""
+    """Retrieve all active media items in an album with fast cached WebP delivery URLs."""
     items = (
         db.query(Media)
         .filter(Media.album_id == album_id, Media.is_deleted == False)
@@ -173,14 +223,22 @@ def get_album_media(
         .all()
     )
 
+    uploaders = {u.id: u.full_name for u in db.query(User).all()}
     results = []
-    for item in items:
-        uploader = db.query(User).filter(User.id == item.uploader_id).first()
-        uploader_name = uploader.full_name if uploader else "Batch Member"
+    base_api = "https://api.theautisticjourney.me/api/v1"
 
-        thumb_url = s3_service.generate_presigned_download_url(item.thumb_s3_key or item.original_s3_key)
-        preview_url = s3_service.generate_presigned_download_url(item.preview_s3_key or item.original_s3_key)
-        original_url = s3_service.generate_presigned_download_url(item.original_s3_key)
+    for item in items:
+        uploader_name = uploaders.get(item.uploader_id, "Batch Member")
+        is_video = item.mime_type.startswith("video/")
+
+        if not is_video:
+            thumb_url = f"{base_api}/media/thumbnail/{item.id}?size=thumb"
+            preview_url = f"{base_api}/media/thumbnail/{item.id}?size=preview"
+        else:
+            thumb_url = None
+            preview_url = s3_service.generate_presigned_download_url(item.original_s3_key)
+
+        original_url = f"{base_api}/media/{item.id}/download"
 
         results.append(
             MediaResponse(

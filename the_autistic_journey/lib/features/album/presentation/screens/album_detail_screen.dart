@@ -383,32 +383,71 @@ class _AlbumDetailScreenState extends ConsumerState<AlbumDetailScreen> {
                   children: [
                     Hero(
                       tag: heroTag,
-                      child: CachedNetworkImage(
-                        imageUrl: item.thumbUrl ??
-                            'https://picsum.photos/seed/${item.id}/400/400',
-                        fit: BoxFit.cover,
-                        placeholder: (context, url) => Container(
-                          color: AppColors.surfaceElevated,
-                          child: const Center(
-                            child: SizedBox(
-                              width: 16,
-                              height: 16,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 1.5,
-                                color: AppColors.mercuryDark,
+                      child: item.isVideo
+                          ? Container(
+                              color: AppColors.surfaceElevated,
+                              child: Center(
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.all(12),
+                                      decoration: BoxDecoration(
+                                        color: AppColors.background.withValues(alpha: 0.8),
+                                        shape: BoxShape.circle,
+                                        border: Border.all(
+                                          color: AppColors.mercuryDark,
+                                          width: 0.5,
+                                        ),
+                                      ),
+                                      child: const Icon(
+                                        Icons.play_arrow_rounded,
+                                        size: 28,
+                                        color: AppColors.textPrimary,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      'MP4 ARCHIVE',
+                                      style: AppTextStyles.labelSmall.copyWith(
+                                        fontSize: 8,
+                                        letterSpacing: 1.5,
+                                        color: AppColors.mercuryDark,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            )
+                          : CachedNetworkImage(
+                              imageUrl: item.thumbUrl ??
+                                  'https://picsum.photos/seed/${item.id}/400/400',
+                              memCacheWidth: 400,
+                              maxWidthDiskCache: 400,
+                              filterQuality: FilterQuality.low,
+                              fit: BoxFit.cover,
+                              placeholder: (context, url) => Container(
+                                color: AppColors.surfaceElevated,
+                                child: const Center(
+                                  child: SizedBox(
+                                    width: 16,
+                                    height: 16,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 1.5,
+                                      color: AppColors.mercuryDark,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              errorWidget: (context, url, error) => Container(
+                                color: AppColors.surfaceElevated,
+                                child: const Icon(
+                                  Icons.broken_image_outlined,
+                                  size: 20,
+                                  color: AppColors.mercuryDark,
+                                ),
                               ),
                             ),
-                          ),
-                        ),
-                        errorWidget: (context, url, error) => Container(
-                          color: AppColors.surfaceElevated,
-                          child: const Icon(
-                            Icons.broken_image_outlined,
-                            size: 20,
-                            color: AppColors.mercuryDark,
-                          ),
-                        ),
-                      ),
                     ),
 
                     // Hover darkened gradient
@@ -497,6 +536,9 @@ class _AlbumDetailScreenState extends ConsumerState<AlbumDetailScreen> {
           ),
         ),
       ),
-    ).animate().fadeIn(duration: 250.ms, delay: (index * 25).ms);
+    ).animate().fadeIn(
+      duration: 200.ms,
+      delay: index < 12 ? (index * 20).ms : Duration.zero,
+    );
   }
 }

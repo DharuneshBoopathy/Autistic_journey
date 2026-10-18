@@ -548,6 +548,9 @@ class _GalleryHomeScreenState extends ConsumerState<GalleryHomeScreen> {
                         child: CachedNetworkImage(
                           imageUrl: album.coverUrl ??
                               'https://picsum.photos/seed/${album.id}/800/600',
+                          memCacheWidth: 600,
+                          maxWidthDiskCache: 600,
+                          filterQuality: FilterQuality.low,
                           fit: BoxFit.cover,
                           placeholder: (context, url) => Container(
                             color: AppColors.surfaceElevated,

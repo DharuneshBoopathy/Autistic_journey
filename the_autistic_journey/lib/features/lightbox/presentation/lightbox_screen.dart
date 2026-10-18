@@ -70,6 +70,7 @@ class _LightboxScreenState extends State<LightboxScreen> {
                       widget.imageUrl.isNotEmpty
                           ? widget.imageUrl
                           : 'https://picsum.photos/1600/1200',
+                      maxWidth: 1600,
                     ),
                     scaleStateController: _scaleController,
                     minScale: PhotoViewComputedScale.contained,

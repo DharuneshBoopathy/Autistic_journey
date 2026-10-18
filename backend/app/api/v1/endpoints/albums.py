@@ -40,11 +40,7 @@ def get_albums(
 
         cover_url = alb.cover_url
         if not cover_url and alb.cover_media_id:
-            cover_media = db.query(Media).filter(Media.id == alb.cover_media_id).first()
-            if cover_media:
-                cover_url = s3_service.generate_presigned_download_url(
-                    cover_media.thumb_s3_key or cover_media.preview_s3_key or cover_media.original_s3_key
-                )
+            cover_url = f"https://api.theautisticjourney.me/api/v1/media/thumbnail/{alb.cover_media_id}?size=preview"
 
         resp = AlbumResponse(
             id=alb.id,

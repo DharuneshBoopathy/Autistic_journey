@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dio/dio.dart';
 import '../../../models/user_model.dart';
 import '../../../core/services/api_service.dart';
+import '../../../core/constants/app_constants.dart';
 
 /// Authentication state for the app.
 enum AuthStatus {
@@ -213,9 +214,16 @@ class AuthNotifier extends StateNotifier<AuthState> {
       }
     } on DioException catch (e) {
       final responseData = e.response?.data;
-      String message = 'Authentication failed. Please verify your credentials.';
+      String message = 'Authentication failed. Please verify your email and password.';
       if (responseData is Map<String, dynamic> && responseData['detail'] != null) {
         message = responseData['detail'].toString();
+      } else if (e.type == DioExceptionType.connectionError ||
+          e.type == DioExceptionType.connectionTimeout ||
+          e.type == DioExceptionType.receiveTimeout) {
+        message =
+            'Unable to reach server (${AppConstants.baseApiUrl}). Please check your internet connection.';
+      } else if (e.message != null && e.message!.isNotEmpty) {
+        message = e.message!;
       }
 
       if (e.response?.statusCode == 403 && message.contains('approval')) {
@@ -232,7 +240,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
     } catch (e) {
       state = state.copyWith(
         status: AuthStatus.error,
-        errorMessage: 'Network connection failed: $e',
+        errorMessage: 'Connection failed: $e',
       );
     }
   }
